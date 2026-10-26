@@ -1,0 +1,29 @@
+import { useTheme } from '../hooks/useTheme'
+
+export default function ThemeToggle({ compact = false }) {
+  const { theme, toggleTheme } = useTheme()
+  const next = theme === 'light' ? 'تیره' : 'روشن'
+
+  return (
+    <button
+      type="button"
+      className={compact ? 'theme-toggle is-compact' : 'theme-toggle'}
+      onClick={toggleTheme}
+      aria-label={`حالت ${next}`}
+      title={`حالت ${next}`}
+    >
+      <span className="theme-toggle-icon" aria-hidden="true">
+        {theme === 'light' ? (
+          <svg viewBox="0 0 24 24" width="18" height="18">
+            <path d="M12 3v2M12 19v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M3 12h2M19 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" width="18" height="18">
+            <path d="M20 13.5A7.5 7.5 0 1 1 10.5 4 6 6 0 0 0 20 13.5z" />
+          </svg>
+        )}
+      </span>
+      {compact ? null : <span>حالت {next}</span>}
+    </button>
+  )
+}

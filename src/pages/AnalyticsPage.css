@@ -1,0 +1,132 @@
+.analytics-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.analytics-filters button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 8px 12px;
+}
+
+.analytics-filters button.is-active {
+  background: var(--chip-on);
+  border-color: var(--chip-on);
+  color: var(--chip-on-text);
+  font-weight: 700;
+}
+
+.analytics-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.chart-box {
+  width: 100%;
+  height: 280px;
+  min-width: 0;
+  direction: ltr;
+}
+
+.chart-box text {
+  font-family: Vazirmatn, Tahoma, sans-serif;
+}
+
+.chart-box-tall {
+  height: 320px;
+}
+
+.chart-tip {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+
+.chart-tip p {
+  margin: 2px 0 0;
+}
+
+.chart-box .recharts-legend-item-text {
+  color: var(--text) !important;
+}
+
+.topic-table-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.topic-table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+}
+
+.topic-table th,
+.topic-table td {
+  text-align: start;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.topic-table th {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.topic-table .num {
+  direction: ltr;
+  text-align: end;
+  unicode-bidi: isolate;
+}
+
+.topic-table tr.is-weak td {
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.stat-grid p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.count-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+}
+
+.count-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.count-list strong {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+@media (max-width: 760px) {
+  .chart-box {
+    height: 240px;
+  }
+
+  .chart-box-tall {
+    height: 280px;
+  }
+}

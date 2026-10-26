@@ -1,0 +1,72 @@
+.mini-timer {
+  position: fixed;
+  left: 18px;
+  bottom: 22px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 36px);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  padding: 6px 6px 6px 16px;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.mini-timer.is-running {
+  border-color: var(--gold);
+}
+
+.mini-timer-toggle {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--ink);
+  padding: 0;
+}
+
+.mini-timer-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.mini-timer-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  color: var(--text);
+  text-decoration: none;
+  line-height: 1.25;
+}
+
+.mini-timer-clock {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-timer-label {
+  max-width: 130px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 760px) {
+  .mini-timer {
+    left: 12px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+}

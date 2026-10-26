@@ -1,0 +1,384 @@
+.timer-page {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.timer-stage {
+  position: relative;
+  min-height: min(100svh, 760px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px 64px;
+  text-align: center;
+}
+
+.study-target {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 26px;
+}
+
+.timer-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.title-select {
+  appearance: none;
+  border: none;
+  border-bottom: 1px solid #3a3a3a;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  letter-spacing: inherit;
+  padding: 0 0 2px;
+  cursor: pointer;
+}
+
+.title-select.is-empty,
+.topic-input::placeholder {
+  color: #8d8d8d;
+}
+
+.title-select:disabled,
+.topic-input:disabled {
+  opacity: 1;
+  cursor: default;
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+}
+
+.topic-input {
+  width: min(280px, 78vw);
+  border: none;
+  border-bottom: 1px solid #3a3a3a;
+  background: transparent;
+  color: var(--text);
+  text-align: center;
+  padding: 6px 8px 8px;
+  font-size: 1rem;
+}
+
+.phase-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 18px 26px;
+  max-width: 100%;
+}
+
+.phase-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  color: #8a8a8a;
+  padding: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.phase-tab.is-active {
+  color: var(--text);
+}
+
+.phase-tab:disabled {
+  cursor: default;
+}
+
+.phase-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.phase-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #bdbdbd;
+}
+
+.phase-dot.is-done {
+  background: var(--chip-on);
+}
+
+.timer-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(640px, 100%);
+  margin: 28px 0 32px;
+}
+
+.timer-clock {
+  margin: 0;
+  font-family: "Arial Black", "Arial", sans-serif;
+  font-weight: 900;
+  font-size: clamp(3.25rem, 14vw, 10rem);
+  line-height: 0.85;
+  letter-spacing: -0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-progress {
+  width: min(240px, 62vw);
+  height: 2px;
+  margin-top: 22px;
+  background: var(--meter-track);
+  direction: ltr;
+}
+
+.timer-progress span {
+  display: block;
+  height: 100%;
+  background: var(--chip-on);
+}
+
+.timer-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.timer-controls button {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #3a3a3a;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+}
+
+.timer-controls button.is-main {
+  width: 72px;
+  height: 72px;
+  background: var(--chip-on);
+  border-color: var(--text);
+  color: var(--chip-on-text);
+}
+
+.timer-controls button:hover {
+  border-color: var(--text);
+}
+
+.timer-controls button.is-main:hover {
+  background: #e8e8e8;
+}
+
+.timer-finish {
+  margin-top: 18px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  padding: 8px 16px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.timer-finish:hover {
+  background: var(--chip-on);
+  color: var(--chip-on-text);
+}
+
+.timer-controls svg {
+  width: 22px;
+  height: 22px;
+}
+
+.timer-controls button.is-main svg {
+  width: 46px;
+  height: 46px;
+}
+
+.icon-solid {
+  fill: currentColor;
+}
+
+.icon-stroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.timer-feedback {
+  min-height: 1.4em;
+  margin-top: 18px;
+  color: #bdbdbd;
+  font-size: 0.92rem;
+}
+
+.timer-feedback.is-error {
+  color: #ff5a5a;
+}
+
+.timer-settings-link {
+  position: fixed;
+  left: 18px;
+  bottom: 22px;
+  z-index: 6;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #3a3a3a;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.timer-lower {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 0 20px 56px;
+}
+
+.timer-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px;
+  margin-top: 16px;
+  color: var(--text);
+}
+
+.timer-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.timer-card-head p,
+.timer-muted {
+  color: var(--muted);
+}
+
+.timer-muted {
+  margin-top: 4px;
+  font-size: 0.92rem;
+}
+
+.session-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.session-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.session-time {
+  text-align: end;
+  flex: none;
+}
+
+.manual-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.manual-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: start;
+}
+
+.manual-form input,
+.manual-form select,
+.manual-form textarea,
+.manual-form .subject-field input,
+.timer-card .pick-field-main {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+  padding: 10px 12px;
+  color-scheme: inherit;
+  caret-color: var(--text);
+}
+
+html[data-theme='light'] .manual-form input,
+html[data-theme='light'] .manual-form select,
+html[data-theme='light'] .manual-form textarea,
+html[data-theme='light'] .manual-form .subject-field input,
+html[data-theme='light'] .timer-card .pick-field-main {
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(20, 32, 51, 0.04);
+}
+
+.manual-note,
+.manual-actions {
+  grid-column: 1 / -1;
+}
+
+.manual-actions {
+  display: flex;
+}
+
+@media (max-width: 760px) {
+  .timer-page {
+    min-height: calc(100svh - 60px);
+  }
+
+  .timer-stage {
+    min-height: 0;
+    padding: 28px 16px 36px;
+  }
+
+  .timer-title {
+    font-size: 1.25rem;
+  }
+
+  .phase-tabs {
+    gap: 14px 18px;
+  }
+
+  .phase-tab {
+    font-size: 0.92rem;
+  }
+
+  .timer-settings-link {
+    left: 12px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .timer-lower {
+    padding-bottom: calc(28px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 640px) {
+  .manual-form {
+    grid-template-columns: 1fr;
+  }
+}
