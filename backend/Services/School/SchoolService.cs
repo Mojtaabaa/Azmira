@@ -5,7 +5,7 @@ namespace KonkoorHelp.Api.Services.Schools;
 
 public sealed class SchoolService(AppDbContext db, SchoolAccess access)
 {
-    public async Task<object> RegisterAsync(int ownerUserId, string name, string? city, string? description, CancellationToken cancellationToken)
+    public async Task<SchoolRegistrationResult> RegisterAsync(int ownerUserId, string name, string? city, string? description, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new InvalidOperationException("نام مدرسه لازم است.");
 
@@ -98,14 +98,7 @@ public sealed class SchoolService(AppDbContext db, SchoolAccess access)
         db.AcademicYears.Add(year);
         await db.SaveChangesAsync(cancellationToken);
 
-        return new
-        {
-            schoolId = school.Id,
-            workspaceId,
-            name = school.Name,
-            slug = school.Slug,
-            academicYearId = year.Id,
-        };
+        return new SchoolRegistrationResult(school.Id, workspaceId, school.Name, school.Slug ?? "", year.Id);
     }
 
     public async Task<object> GetProfileAsync(Guid workspaceId, CancellationToken cancellationToken)
@@ -201,6 +194,9 @@ public sealed class SchoolService(AppDbContext db, SchoolAccess access)
         if (!await db.Users.AnyAsync(item => item.Id == userId && item.DeletedAt == null, cancellationToken))
             throw new InvalidOperationException("کاربر پیدا نشد.");
 
+        if (role == WorkspaceMemberRole.SchoolOwner)
+            throw new InvalidOperationException("نقش مالک مدرسه فقط از طریق انتقال مالکیت قابل تنظیم است.");
+
         var existing = await db.WorkspaceMembers.FirstOrDefaultAsync(
             item => item.WorkspaceId == workspaceId && item.UserId == userId && item.DeletedAt == null,
             cancellationToken);
@@ -222,6 +218,18 @@ public sealed class SchoolService(AppDbContext db, SchoolAccess access)
         }
         else
         {
+            if (existing.Role == WorkspaceMemberRole.SchoolOwner && role != WorkspaceMemberRole.SchoolOwner)
+            {
+                var owners = await db.WorkspaceMembers.CountAsync(
+                    item => item.WorkspaceId == workspaceId
+                        && item.DeletedAt == null
+                        && item.Status == WorkspaceMemberStatus.Active
+                        && item.Role == WorkspaceMemberRole.SchoolOwner,
+                    cancellationToken);
+                if (owners <= 1)
+                    throw new InvalidOperationException("نمی‌توان آخرین مالک مدرسه را تنزل داد.");
+            }
+
             existing.Role = role;
             existing.Status = WorkspaceMemberStatus.Active;
             existing.UpdatedAt = now;
@@ -394,3 +402,10 @@ public sealed class SchoolService(AppDbContext db, SchoolAccess access)
         return $"{raw}-{Guid.NewGuid().ToString("N")[..6]}";
     }
 }
+
+public sealed record SchoolRegistrationResult(
+    Guid SchoolId,
+    Guid WorkspaceId,
+    string Name,
+    string Slug,
+    Guid AcademicYearId);

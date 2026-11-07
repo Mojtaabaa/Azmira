@@ -12,6 +12,7 @@ const LOADING = {
   user: null,
   workspaces: [],
   activeWorkspaceId: null,
+  capabilities: null,
   message: '',
   importNotice: '',
 }
@@ -20,6 +21,7 @@ const ANON = {
   user: null,
   workspaces: [],
   activeWorkspaceId: null,
+  capabilities: null,
   message: '',
   importNotice: '',
 }
@@ -63,6 +65,7 @@ export default function AuthProvider({ children }) {
       user,
       workspaces,
       activeWorkspaceId,
+      capabilities: workspaceInfo?.capabilities || null,
       message: '',
       importNotice,
     })
@@ -95,6 +98,7 @@ export default function AuthProvider({ children }) {
         user: null,
         workspaces: [],
         activeWorkspaceId: null,
+        capabilities: null,
         message: error.message || 'ارتباط با سرور برقرار نشد.',
         importNotice: '',
       })
@@ -143,11 +147,19 @@ export default function AuthProvider({ children }) {
     resetData()
     clearDrafts()
     await loadData()
+    let capabilities = state.capabilities
+    try {
+      const me = await request('GET', '/auth/me', undefined, { silent: true })
+      capabilities = me.capabilities || capabilities
+    } catch {
+      void 0
+    }
     setState((current) => ({
       ...current,
       activeWorkspaceId: workspaceId,
+      capabilities,
     }))
-  }, [state.activeWorkspaceId])
+  }, [state.activeWorkspaceId, state.capabilities])
 
   const value = useMemo(
     () => ({ ...state, login, register, logout, retry: boot, clearImportNotice, switchWorkspace }),

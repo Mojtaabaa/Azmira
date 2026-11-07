@@ -163,6 +163,27 @@
   background: linear-gradient(145deg, #14b8a6, #0f766e);
 }
 
+.store-avatar-panel {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  max-width: 220px;
+}
+
+.store-avatar-prototype {
+  display: grid;
+  gap: 8px;
+  justify-items: stretch;
+  text-align: center;
+}
+
+.store-avatar-prototype__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
 .avatar-stage {
   width: 112px;
   flex-shrink: 0;

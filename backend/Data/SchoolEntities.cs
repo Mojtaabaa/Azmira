@@ -128,3 +128,27 @@ public sealed class SchoolSettingsExtras
     public string AnalyticsDefaultsJson { get; set; } = "{}";
     public DateTime UpdatedAt { get; set; }
 }
+
+public enum SchoolRegistrationRequestStatus : byte
+{
+    Pending = 1,
+    Approved = 2,
+    Rejected = 3,
+}
+
+public sealed class SchoolRegistrationRequest
+{
+    public Guid Id { get; set; }
+    public int RequesterUserId { get; set; }
+    public string Name { get; set; } = "";
+    public string City { get; set; } = "";
+    public string Description { get; set; } = "";
+    public SchoolRegistrationRequestStatus Status { get; set; } = SchoolRegistrationRequestStatus.Pending;
+    public int? ReviewerUserId { get; set; }
+    public DateTime? ReviewedAt { get; set; }
+    public string Notes { get; set; } = "";
+    public Guid? CreatedSchoolId { get; set; }
+    public Guid? CreatedWorkspaceId { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}

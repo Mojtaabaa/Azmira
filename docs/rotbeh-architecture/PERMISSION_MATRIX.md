@@ -31,7 +31,7 @@ Personal workspace typically only has **Student** (owner). Owner actions on Pers
 | Resource / Action | Platform Admin | School Owner | School Admin | Academic Mgr | Teacher | Student | Parent |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Platform users list | R | — | — | — | — | — | — |
-| Create school | C | — | — | — | — | — | — |
+| Create school | C (direct or approve request) | — | — | — | — | request only | — |
 | School profile | CRUD | CRUD | RU | R | R | R | R |
 | Workspace settings (school) | RU | RU | RU | R | R | R | R |
 | Personal workspace settings | — | — | — | — | — | RU own WS | — |

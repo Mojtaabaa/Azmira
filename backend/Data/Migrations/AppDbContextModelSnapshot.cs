@@ -1599,6 +1599,65 @@ namespace KonkoorHelp.Api.Data.Migrations
                     b.ToTable("SchoolAssignmentSubmissions", (string)null);
                 });
 
+            modelBuilder.Entity("KonkoorHelp.Api.Data.SchoolRegistrationRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedSchoolId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CreatedWorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(800)
+                        .HasColumnType("nvarchar(800)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("RequesterUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewerUserId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequesterUserId", "Status");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("SchoolRegistrationRequests", (string)null);
+                });
+
             modelBuilder.Entity("KonkoorHelp.Api.Data.SchoolSettingsExtras", b =>
                 {
                     b.Property<Guid>("WorkspaceId")

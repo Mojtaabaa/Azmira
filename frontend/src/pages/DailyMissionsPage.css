@@ -1,0 +1,66 @@
+.daily-missions__en {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--pillar-achieve);
+}
+
+.daily-missions__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.daily-missions__error {
+  color: var(--danger);
+}
+
+.daily-missions__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.daily-missions__card {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-solid) 85%, transparent);
+}
+
+.daily-missions__card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.daily-missions__status {
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--text-muted);
+}
+
+.daily-missions__why,
+.daily-missions__meta,
+.daily-missions__done,
+.daily-missions__policy {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.5;
+}
+
+.daily-missions__card.is-completed {
+  border-color: color-mix(in srgb, var(--pillar-achieve) 40%, var(--border));
+}
+
+.daily-missions__card.is-claimed {
+  opacity: 0.85;
+}

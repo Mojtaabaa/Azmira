@@ -9,20 +9,26 @@ namespace KonkoorHelp.Tests;
 
 public class SchoolEditionTests
 {
+    private static readonly JsonSerializerOptions Camel = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
     private static ServiceProvider BuildSp()
     {
         var services = new ServiceCollection();
-        services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(Guid.NewGuid().ToString("N")));
+        services.AddDbContext<AppDbContext>(options => TestDbOptions.UseInMemory(options, Guid.NewGuid().ToString("N")));
         services.AddScoped<OutboxPublisher>();
         services.AddScoped<GamificationProfileService>();
         services.AddScoped<SchoolAccess>();
         services.AddScoped<SchoolService>();
+        services.AddScoped<SchoolRegistrationService>();
         services.AddScoped<TeacherPortalService>();
         services.AddScoped<ParentPortalService>();
         services.AddScoped<SchoolAnalyticsService>();
         services.AddLogging();
         return services.BuildServiceProvider();
     }
+
+    private static JsonDocument Json(object value) =>
+        JsonDocument.Parse(JsonSerializer.Serialize(value, Camel));
 
     private static int _nextUserId = 1000;
 
@@ -85,7 +91,7 @@ public class SchoolEditionTests
         });
         await db.SaveChangesAsync();
 
-        var created = JsonDocument.Parse(JsonSerializer.Serialize(await schools.RegisterAsync(ownerId, "دبیرستان الف", "تهران", null, CancellationToken.None)));
+        var created = Json(await schools.RegisterAsync(ownerId, "دبیرستان الف", "تهران", null, CancellationToken.None));
         var schoolWs = created.RootElement.GetProperty("workspaceId").GetGuid();
 
         Assert.Equal(2, await db.Workspaces.CountAsync());
@@ -104,7 +110,7 @@ public class SchoolEditionTests
         var teacherPortal = scope.ServiceProvider.GetRequiredService<TeacherPortalService>();
         var access = scope.ServiceProvider.GetRequiredService<SchoolAccess>();
 
-        var created = JsonDocument.Parse(JsonSerializer.Serialize(await schools.RegisterAsync(ownerId, "مدرسه ب", null, null, CancellationToken.None)));
+        var created = Json(await schools.RegisterAsync(ownerId, "مدرسه ب", null, null, CancellationToken.None));
         var workspaceId = created.RootElement.GetProperty("workspaceId").GetGuid();
         var teacherId = await AddUserAsync(db, "teacher1");
         var studentIn = await AddUserAsync(db, "stu1");
@@ -113,8 +119,8 @@ public class SchoolEditionTests
         await schools.InviteMemberAsync(workspaceId, ownerId, studentIn, WorkspaceMemberRole.Student, CancellationToken.None);
         await schools.InviteMemberAsync(workspaceId, ownerId, studentOut, WorkspaceMemberRole.Student, CancellationToken.None);
 
-        var classA = JsonDocument.Parse(JsonSerializer.Serialize(await schools.CreateClassAsync(workspaceId, teacherId, "۱۰۱", null, null, CancellationToken.None)));
-        var classB = JsonDocument.Parse(JsonSerializer.Serialize(await schools.CreateClassAsync(workspaceId, ownerId, "۱۰۲", null, null, CancellationToken.None)));
+        var classA = Json(await schools.CreateClassAsync(workspaceId, teacherId, "۱۰۱", null, null, CancellationToken.None));
+        var classB = Json(await schools.CreateClassAsync(workspaceId, ownerId, "۱۰۲", null, null, CancellationToken.None));
         var classAId = classA.RootElement.GetProperty("id").GetGuid();
         var classBId = classB.RootElement.GetProperty("id").GetGuid();
 
@@ -138,7 +144,7 @@ public class SchoolEditionTests
         var schools = scope.ServiceProvider.GetRequiredService<SchoolService>();
         var parents = scope.ServiceProvider.GetRequiredService<ParentPortalService>();
 
-        var created = JsonDocument.Parse(JsonSerializer.Serialize(await schools.RegisterAsync(ownerId, "مدرسه ج", null, null, CancellationToken.None)));
+        var created = Json(await schools.RegisterAsync(ownerId, "مدرسه ج", null, null, CancellationToken.None));
         var workspaceId = created.RootElement.GetProperty("workspaceId").GetGuid();
         var parentId = await AddUserAsync(db, "parent1");
         var childId = await AddUserAsync(db, "child1");
@@ -147,13 +153,13 @@ public class SchoolEditionTests
         await schools.InviteMemberAsync(workspaceId, ownerId, childId, WorkspaceMemberRole.Student, CancellationToken.None);
         await schools.InviteMemberAsync(workspaceId, ownerId, otherChild, WorkspaceMemberRole.Student, CancellationToken.None);
 
-        var link = JsonDocument.Parse(JsonSerializer.Serialize(await parents.RequestLinkAsync(workspaceId, parentId, childId, CancellationToken.None)));
+        var link = Json(await parents.RequestLinkAsync(workspaceId, parentId, childId, CancellationToken.None));
         Assert.Equal("Pending", link.RootElement.GetProperty("status").GetString());
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             parents.ChildSummaryAsync(workspaceId, parentId, childId, CancellationToken.None));
 
         await parents.VerifyLinkAsync(workspaceId, ownerId, link.RootElement.GetProperty("id").GetGuid(), true, CancellationToken.None);
-        var summary = JsonDocument.Parse(JsonSerializer.Serialize(await parents.ChildSummaryAsync(workspaceId, parentId, childId, CancellationToken.None)));
+        var summary = Json(await parents.ChildSummaryAsync(workspaceId, parentId, childId, CancellationToken.None));
         Assert.True(summary.RootElement.GetProperty("readOnly").GetBoolean());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
@@ -169,12 +175,12 @@ public class SchoolEditionTests
         var access = scope.ServiceProvider.GetRequiredService<SchoolAccess>();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var a = JsonDocument.Parse(JsonSerializer.Serialize(await schools.RegisterAsync(ownerId, "مدرسه ۱", null, null, CancellationToken.None)));
+        var a = Json(await schools.RegisterAsync(ownerId, "مدرسه ۱", null, null, CancellationToken.None));
         var owner2 = await AddUserAsync(db, "owner2");
-        var b = JsonDocument.Parse(JsonSerializer.Serialize(await schools.RegisterAsync(owner2, "مدرسه ۲", null, null, CancellationToken.None)));
+        var b = Json(await schools.RegisterAsync(owner2, "مدرسه ۲", null, null, CancellationToken.None));
         var wsA = a.RootElement.GetProperty("workspaceId").GetGuid();
         var wsB = b.RootElement.GetProperty("workspaceId").GetGuid();
-        var classB = JsonDocument.Parse(JsonSerializer.Serialize(await schools.CreateClassAsync(wsB, owner2, "کلاس ب", null, null, CancellationToken.None)));
+        var classB = Json(await schools.CreateClassAsync(wsB, owner2, "کلاس ب", null, null, CancellationToken.None));
         var classBId = classB.RootElement.GetProperty("id").GetGuid();
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
@@ -190,18 +196,18 @@ public class SchoolEditionTests
         var schools = scope.ServiceProvider.GetRequiredService<SchoolService>();
         var analytics = scope.ServiceProvider.GetRequiredService<SchoolAnalyticsService>();
 
-        var created = JsonDocument.Parse(JsonSerializer.Serialize(await schools.RegisterAsync(ownerId, "مدرسه د", null, null, CancellationToken.None)));
+        var created = Json(await schools.RegisterAsync(ownerId, "مدرسه د", null, null, CancellationToken.None));
         var workspaceId = created.RootElement.GetProperty("workspaceId").GetGuid();
         var teacherId = await AddUserAsync(db, "t-analytics");
         await schools.InviteMemberAsync(workspaceId, ownerId, teacherId, WorkspaceMemberRole.Teacher, CancellationToken.None);
-        var classJson = JsonDocument.Parse(JsonSerializer.Serialize(await schools.CreateClassAsync(workspaceId, teacherId, "آمار", null, null, CancellationToken.None)));
+        var classJson = Json(await schools.CreateClassAsync(workspaceId, teacherId, "آمار", null, null, CancellationToken.None));
         var classId = classJson.RootElement.GetProperty("id").GetGuid();
 
-        var payload = JsonDocument.Parse(JsonSerializer.Serialize(await analytics.DashboardAsync(
-            workspaceId, WorkspaceMemberRole.Teacher, teacherId, null, null, classId, null, null, null, CancellationToken.None)));
+        var payload = Json(await analytics.DashboardAsync(
+            workspaceId, WorkspaceMemberRole.Teacher, teacherId, null, null, classId, null, null, null, CancellationToken.None));
         Assert.True(payload.RootElement.TryGetProperty("studentActivity", out _));
 
-        var otherClass = JsonDocument.Parse(JsonSerializer.Serialize(await schools.CreateClassAsync(workspaceId, ownerId, "دیگر", null, null, CancellationToken.None)));
+        var otherClass = Json(await schools.CreateClassAsync(workspaceId, ownerId, "دیگر", null, null, CancellationToken.None));
         var otherClassId = otherClass.RootElement.GetProperty("id").GetGuid();
         var access = scope.ServiceProvider.GetRequiredService<SchoolAccess>();
         await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>

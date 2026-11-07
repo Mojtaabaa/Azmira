@@ -126,3 +126,57 @@
     transform: none;
   }
 }
+
+.school-stats-secondary div {
+  background: color-mix(in srgb, var(--surface, #fff) 82%, #64748b 10%);
+}
+
+.school-table-wrap {
+  overflow: auto;
+  margin-top: 8px;
+}
+
+.school-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.school-table th,
+.school-table td {
+  text-align: right;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.school-table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.school-bars {
+  display: grid;
+  gap: 10px;
+}
+
+.school-bar-row {
+  display: grid;
+  grid-template-columns: minmax(72px, 120px) 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.school-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface, #fff) 70%, #94a3b8 30%);
+  overflow: hidden;
+}
+
+.school-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, #0369a1 80%, #22c55e 20%);
+  min-width: 4px;
+}

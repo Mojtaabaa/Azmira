@@ -1,10 +1,19 @@
 // @ts-nocheck
 import { useCallback, useEffect, useState } from 'react'
+import CapabilityGate from '../components/CapabilityGate'
 import { useAuth } from '../hooks/useAuth'
 import { request } from '../utils/api'
 import './SchoolEdition.css'
 
 export default function TeacherPortalPage() {
+  return (
+    <CapabilityGate require="teacher" title="پورتال معلم">
+      <TeacherPortalInner />
+    </CapabilityGate>
+  )
+}
+
+function TeacherPortalInner() {
   const { status, workspaces, activeWorkspaceId } = useAuth()
   const [classes, setClasses] = useState([])
   const [selectedClass, setSelectedClass] = useState(null)
@@ -49,10 +58,12 @@ export default function TeacherPortalPage() {
     return (
       <div className="school-page">
         <h1>پورتال معلم</h1>
-        <p>برای دسترسی، به یک فضای مدرسه سوییچ کن.</p>
+        <p className="muted">برای دسترسی، به یک فضای مدرسه سوییچ کن.</p>
       </div>
     )
   }
+
+  const totalStudents = classes.reduce((sum, item) => sum + (item.studentCount || 0), 0)
 
   return (
     <div className="school-page">
@@ -66,43 +77,78 @@ export default function TeacherPortalPage() {
       {error ? <p className="school-error">{error}</p> : null}
 
       <section className="school-panel">
+        <h2>خلاصه</h2>
+        <div className="school-stats">
+          <div><strong>{classes.length}</strong><span>کلاس</span></div>
+          <div><strong>{totalStudents}</strong><span>دانش‌آموز (مجموع)</span></div>
+          <div><strong>{students.length}</strong><span>در کلاس باز</span></div>
+        </div>
+      </section>
+
+      <section className="school-panel">
         <h2>کلاس‌های من</h2>
-        <ul className="school-list">
-          {classes.map((item) => (
-            <li key={item.id}>
-              <div>
-                <strong>{item.name}</strong>
-                <span className="muted">{item.studentCount} دانش‌آموز</span>
-              </div>
-              <button type="button" onClick={() => openClass(item.id)}>
-                باز کردن
-              </button>
-            </li>
-          ))}
-        </ul>
+        {classes.length === 0 ? <p className="muted">کلاسی تخصیص داده نشده.</p> : null}
+        <div className="school-table-wrap">
+          <table className="school-table">
+            <thead>
+              <tr>
+                <th>کلاس</th>
+                <th>دانش‌آموز</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {classes.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.name}</td>
+                  <td>{item.studentCount}</td>
+                  <td>
+                    <button type="button" onClick={() => openClass(item.id)}>باز کردن</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {selectedClass ? (
         <>
           <section className="school-panel">
             <h2>دانش‌آموزان</h2>
-            <ul className="school-list">
-              {students.map((item) => (
-                <li key={item.userId}>
-                  <strong>{item.displayName}</strong>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setProgress(await request('GET', `/teacher/students/${item.userId}/progress`))
-                    }}
-                  >
-                    پیشرفت
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="school-table-wrap">
+              <table className="school-table">
+                <thead>
+                  <tr>
+                    <th>نام</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {students.map((item) => (
+                    <tr key={item.userId}>
+                      <td>{item.displayName}</td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setProgress(await request('GET', `/teacher/students/${item.userId}/progress`))
+                          }}
+                        >
+                          پیشرفت
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             {progress ? (
-              <pre className="school-facts">{JSON.stringify(progress, null, 2)}</pre>
+              <div className="school-stats school-stats-secondary">
+                <div><strong>{progress.xp ?? progress.totalXp ?? '—'}</strong><span>XP</span></div>
+                <div><strong>{progress.streak ?? progress.streakCurrent ?? '—'}</strong><span>استریک</span></div>
+                <div><strong>{progress.level ?? '—'}</strong><span>سطح</span></div>
+              </div>
             ) : null}
           </section>
 

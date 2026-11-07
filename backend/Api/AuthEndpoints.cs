@@ -77,6 +77,7 @@ public static class AuthEndpoints
                 user = new { id = user.Id, username = user.Username, displayName = user.DisplayName, platformRole = user.PlatformRole },
                 workspaces = list.Select(WorkspaceEndpoints.MapItem),
                 activeWorkspaceId = active.WorkspaceId,
+                capabilities = UserCapabilities.Build(user.PlatformRole, list, active.WorkspaceId),
             });
         });
 
@@ -115,6 +116,7 @@ public static class AuthEndpoints
                 },
                 workspaces = list.Select(WorkspaceEndpoints.MapItem),
                 activeWorkspaceId = active.WorkspaceId,
+                capabilities = UserCapabilities.Build(user.PlatformRole, list, active.WorkspaceId),
             });
         });
 

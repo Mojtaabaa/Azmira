@@ -69,6 +69,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<SchoolAssignmentSubmission> SchoolAssignmentSubmissions => Set<SchoolAssignmentSubmission>();
     public DbSet<TeacherFeedback> TeacherFeedback => Set<TeacherFeedback>();
     public DbSet<SchoolSettingsExtras> SchoolSettingsExtras => Set<SchoolSettingsExtras>();
+    public DbSet<SchoolRegistrationRequest> SchoolRegistrationRequests => Set<SchoolRegistrationRequest>();
     public DbSet<ApiClient> ApiClients => Set<ApiClient>();
     public DbSet<ApiClientWorkspace> ApiClientWorkspaces => Set<ApiClientWorkspace>();
     public DbSet<WebhookEndpoint> WebhookEndpoints => Set<WebhookEndpoint>();
@@ -747,6 +748,18 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasKey(item => item.Id);
             entity.Property(item => item.Body).HasMaxLength(2000).IsRequired();
             entity.HasIndex(item => new { item.WorkspaceId, item.StudentUserId, item.CreatedAt });
+        });
+
+        modelBuilder.Entity<SchoolRegistrationRequest>(entity =>
+        {
+            entity.ToTable("SchoolRegistrationRequests");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Name).HasMaxLength(160).IsRequired();
+            entity.Property(item => item.City).HasMaxLength(80).IsRequired();
+            entity.Property(item => item.Description).HasMaxLength(800).IsRequired();
+            entity.Property(item => item.Notes).HasMaxLength(500).IsRequired();
+            entity.HasIndex(item => new { item.Status, item.CreatedAt });
+            entity.HasIndex(item => new { item.RequesterUserId, item.Status });
         });
 
         modelBuilder.Entity<SchoolSettingsExtras>(entity =>

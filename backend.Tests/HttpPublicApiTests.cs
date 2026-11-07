@@ -141,7 +141,7 @@ public class HttpPublicApiTests : IClassFixture<HttpPublicApiTests.Factory>
             builder.ConfigureTestServices(services =>
             {
                 RemoveAppDbContext(services);
-                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(_dbName));
+                services.AddDbContext<AppDbContext>(options => TestDbOptions.UseInMemory(options, _dbName));
                 services.RemoveAll(typeof(IOptions<IntegrationsOptions>));
                 services.AddSingleton(Options.Create(new IntegrationsOptions { WebhookProtectionKey = _protectionKey }));
             });
@@ -403,6 +403,132 @@ public class HttpPublicApiTests : IClassFixture<HttpPublicApiTests.Factory>
             request.Headers.TryAddWithoutValidation("X-Rotbeh-Workspace", workspaceId.ToString());
             if (body is not null) request.Content = JsonContent.Create(body);
             return await client.SendAsync(request);
+        }
+
+        public sealed record TeacherConfirmSeed(
+            string TeacherCookie,
+            string StudentCookie,
+            string ForeignTeacherCookie,
+            Guid SchoolWs,
+            Guid ForeignSchoolWs,
+            int TeacherUserId,
+            int StudentUserId,
+            Guid ManualQuestId,
+            Guid NullWorkspaceQuestId);
+
+        public async Task<TeacherConfirmSeed> SeedTeacherManualMissionAsync()
+        {
+            await using var scope = Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var passwords = scope.ServiceProvider.GetRequiredService<KonkoorHelp.Api.Services.PasswordService>();
+
+            var ownerId = Interlocked.Increment(ref _userSeq);
+            var teacherId = Interlocked.Increment(ref _userSeq);
+            var studentId = Interlocked.Increment(ref _userSeq);
+            var foreignTeacherId = Interlocked.Increment(ref _userSeq);
+            var foreignOwnerId = Interlocked.Increment(ref _userSeq);
+
+            db.Users.AddRange(
+                new UserAccount { Id = ownerId, Username = "own" + ownerId, NormalizedUsername = "own" + ownerId, PasswordHash = passwords.Hash("password1"), CreatedAt = DateTime.UtcNow },
+                new UserAccount { Id = teacherId, Username = "tch" + teacherId, NormalizedUsername = "tch" + teacherId, PasswordHash = passwords.Hash("password1"), CreatedAt = DateTime.UtcNow },
+                new UserAccount { Id = studentId, Username = "stu" + studentId, NormalizedUsername = "stu" + studentId, PasswordHash = passwords.Hash("password1"), CreatedAt = DateTime.UtcNow },
+                new UserAccount { Id = foreignOwnerId, Username = "fo" + foreignOwnerId, NormalizedUsername = "fo" + foreignOwnerId, PasswordHash = passwords.Hash("password1"), CreatedAt = DateTime.UtcNow },
+                new UserAccount { Id = foreignTeacherId, Username = "ft" + foreignTeacherId, NormalizedUsername = "ft" + foreignTeacherId, PasswordHash = passwords.Hash("password1"), CreatedAt = DateTime.UtcNow });
+
+            var schoolWs = Guid.NewGuid();
+            var foreignWs = Guid.NewGuid();
+            var classId = Guid.NewGuid();
+            var questId = Guid.NewGuid();
+            var nullQuestId = Guid.NewGuid();
+            var now = DateTime.UtcNow;
+
+            db.Workspaces.AddRange(
+                new Workspace { Id = schoolWs, Type = WorkspaceType.School, Name = "ConfirmSchool", OwnerUserId = ownerId, Status = WorkspaceStatus.Active, CreatedAt = now, UpdatedAt = now },
+                new Workspace { Id = foreignWs, Type = WorkspaceType.School, Name = "ForeignSchool", OwnerUserId = foreignOwnerId, Status = WorkspaceStatus.Active, CreatedAt = now, UpdatedAt = now });
+            db.Schools.AddRange(
+                new School { Id = Guid.NewGuid(), WorkspaceId = schoolWs, Name = "ConfirmSchool", Slug = "cs" + ownerId, OwnerUserId = ownerId, CreatedAt = now, UpdatedAt = now },
+                new School { Id = Guid.NewGuid(), WorkspaceId = foreignWs, Name = "ForeignSchool", Slug = "fs" + foreignOwnerId, OwnerUserId = foreignOwnerId, CreatedAt = now, UpdatedAt = now });
+
+            // Personal workspaces required for login/session workspace resolution
+            var personalTeacher = Guid.NewGuid();
+            var personalStudent = Guid.NewGuid();
+            var personalForeign = Guid.NewGuid();
+            db.Workspaces.AddRange(
+                new Workspace { Id = personalTeacher, Type = WorkspaceType.Personal, Name = "pt", OwnerUserId = teacherId, Status = WorkspaceStatus.Active, CreatedAt = now, UpdatedAt = now },
+                new Workspace { Id = personalStudent, Type = WorkspaceType.Personal, Name = "ps", OwnerUserId = studentId, Status = WorkspaceStatus.Active, CreatedAt = now, UpdatedAt = now },
+                new Workspace { Id = personalForeign, Type = WorkspaceType.Personal, Name = "pf", OwnerUserId = foreignTeacherId, Status = WorkspaceStatus.Active, CreatedAt = now, UpdatedAt = now });
+
+            db.WorkspaceMembers.AddRange(
+                new WorkspaceMember { Id = Guid.NewGuid(), WorkspaceId = schoolWs, UserId = ownerId, Role = WorkspaceMemberRole.SchoolOwner, Status = WorkspaceMemberStatus.Active, CreatedAt = now, UpdatedAt = now },
+                new WorkspaceMember { Id = Guid.NewGuid(), WorkspaceId = schoolWs, UserId = teacherId, Role = WorkspaceMemberRole.Teacher, Status = WorkspaceMemberStatus.Active, CreatedAt = now, UpdatedAt = now },
+                new WorkspaceMember { Id = Guid.NewGuid(), WorkspaceId = schoolWs, UserId = studentId, Role = WorkspaceMemberRole.Student, Status = WorkspaceMemberStatus.Active, CreatedAt = now, UpdatedAt = now },
+                new WorkspaceMember { Id = Guid.NewGuid(), WorkspaceId = foreignWs, UserId = foreignOwnerId, Role = WorkspaceMemberRole.SchoolOwner, Status = WorkspaceMemberStatus.Active, CreatedAt = now, UpdatedAt = now },
+                new WorkspaceMember { Id = Guid.NewGuid(), WorkspaceId = foreignWs, UserId = foreignTeacherId, Role = WorkspaceMemberRole.Teacher, Status = WorkspaceMemberStatus.Active, CreatedAt = now, UpdatedAt = now },
+                new WorkspaceMember { Id = Guid.NewGuid(), WorkspaceId = personalTeacher, UserId = teacherId, Role = WorkspaceMemberRole.Student, Status = WorkspaceMemberStatus.Active, CreatedAt = now, UpdatedAt = now },
+                new WorkspaceMember { Id = Guid.NewGuid(), WorkspaceId = personalStudent, UserId = studentId, Role = WorkspaceMemberRole.Student, Status = WorkspaceMemberStatus.Active, CreatedAt = now, UpdatedAt = now },
+                new WorkspaceMember { Id = Guid.NewGuid(), WorkspaceId = personalForeign, UserId = foreignTeacherId, Role = WorkspaceMemberRole.Student, Status = WorkspaceMemberStatus.Active, CreatedAt = now, UpdatedAt = now });
+
+            db.Classes.Add(new ClassGroup
+            {
+                Id = classId,
+                WorkspaceId = schoolWs,
+                Name = "۱۰۱",
+                CreatedByUserId = teacherId,
+                CreatedAt = now,
+            });
+            db.ClassMembers.AddRange(
+                new ClassMember { Id = Guid.NewGuid(), ClassId = classId, UserId = teacherId, Role = ClassMemberRole.Teacher, JoinedAt = now },
+                new ClassMember { Id = Guid.NewGuid(), ClassId = classId, UserId = studentId, Role = ClassMemberRole.Student, JoinedAt = now });
+
+            db.Quests.AddRange(
+                new QuestDefinition
+                {
+                    Id = questId,
+                    WorkspaceId = schoolWs,
+                    Title = "تایید دستی",
+                    Description = "manual mission",
+                    Category = "classroom",
+                    Kind = QuestKind.TeacherAssigned,
+                    TargetValue = 1,
+                    RewardXp = 5,
+                    RewardCoins = 1,
+                    CompletionCondition = "manual",
+                    Status = QuestStatus.Active,
+                    AssignedUserId = studentId,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new QuestDefinition
+                {
+                    Id = nullQuestId,
+                    WorkspaceId = null,
+                    Title = "system",
+                    Description = "system scoped",
+                    Category = "classroom",
+                    Kind = QuestKind.TeacherAssigned,
+                    TargetValue = 1,
+                    RewardXp = 5,
+                    CompletionCondition = "manual",
+                    Status = QuestStatus.Active,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+
+            var teacherCookie = IssueSessionCookie(db, teacherId);
+            var studentCookie = IssueSessionCookie(db, studentId);
+            var foreignCookie = IssueSessionCookie(db, foreignTeacherId);
+            await db.SaveChangesAsync();
+
+            return new TeacherConfirmSeed(
+                teacherCookie,
+                studentCookie,
+                foreignCookie,
+                schoolWs,
+                foreignWs,
+                teacherId,
+                studentId,
+                questId,
+                nullQuestId);
         }
     }
 }

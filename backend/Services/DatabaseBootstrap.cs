@@ -33,7 +33,43 @@ public static class DatabaseBootstrap
         await DefaultStoreSeed.EnsureAsync(db, cancellationToken);
         var srs = scope.ServiceProvider.GetRequiredService<SpacedRepetitionService>();
         await srs.EnsureDefaultProfileAsync(cancellationToken);
+        await EnsureBootstrapPlatformAdminAsync(db, env, logger, cancellationToken);
         logger.LogInformation("Database migrated, workspaces and gamification defaults ensured.");
+    }
+
+    private static async Task EnsureBootstrapPlatformAdminAsync(
+        AppDbContext db,
+        IHostEnvironment env,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        var hasAdmin = await db.Users.AnyAsync(
+            item => item.DeletedAt == null && item.PlatformRole >= PlatformRoles.Administrator,
+            cancellationToken);
+        if (hasAdmin) return;
+
+        var username = Environment.GetEnvironmentVariable("ROTBEH_BOOTSTRAP_PLATFORM_ADMIN_USERNAME")?.Trim();
+        if (string.IsNullOrEmpty(username))
+        {
+            if (!env.IsDevelopment()) return;
+            var first = await db.Users.AsNoTracking()
+                .Where(item => item.DeletedAt == null)
+                .OrderBy(item => item.Id)
+                .Select(item => item.Username)
+                .FirstOrDefaultAsync(cancellationToken);
+            username = first;
+            if (string.IsNullOrEmpty(username)) return;
+        }
+
+        var normalized = username.ToUpperInvariant();
+        var user = await db.Users.FirstOrDefaultAsync(
+            item => item.DeletedAt == null && item.NormalizedUsername == normalized,
+            cancellationToken);
+        if (user is null) return;
+
+        user.PlatformRole = PlatformRoles.Administrator;
+        await db.SaveChangesAsync(cancellationToken);
+        logger.LogWarning("Bootstrapped platform administrator for user {Username}", user.Username);
     }
 
     /// <summary>

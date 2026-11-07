@@ -1,0 +1,26 @@
+.ui-meter {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--meter-track);
+  overflow: hidden;
+}
+
+.ui-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--meter-fill);
+  transition: width 320ms var(--ease-out);
+}
+
+.ui-meter--plan > span { background: var(--pillar-plan); }
+.ui-meter--learn > span { background: var(--pillar-learn); }
+.ui-meter--improve > span { background: var(--pillar-improve); }
+.ui-meter--achieve > span { background: var(--pillar-achieve); }
+.ui-meter--accent > span { background: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-meter > span {
+    transition: none;
+  }
+}

@@ -1,8 +1,17 @@
 # Administrator Guide
 
+## Platform admins (multi-admin)
+
+- Panel: `/platform` (requires `PlatformRole` ≥ 100).
+- Promote/demote platform admins (`POST /api/platform/users/{id}/role`). The last platform admin cannot be removed.
+- Approve or reject school registration requests.
+- Create a school directly for an existing user (`ownerUserId`).
+- Dashboard KPIs: users, admins, schools, pending requests.
+
 ## School admins / owners
 
-- Register school via `/api/schools`, manage members, years, grades, subjects, classes.
+- Switch to the school workspace, then manage members, years, grades, subjects, classes.
+- Assign Teacher / Parent / Student (and related) roles — cannot assign or demote the last `SchoolOwner` casually.
 - Configure gamification profile under `/api/admin/gamification/*` when permitted.
 - Teacher portal: assignments, missions, feedback, class activity.
 - Analytics: `/api/schools/analytics` and `/api/v1/analytics/school`.
@@ -19,3 +28,4 @@
 - Watch `/health/ready` and application logs for unhandled API errors.
 - Outbox + webhook hosted services process asynchronously; backlog indicates worker/DB issues.
 - Rotate API keys by creating a new client then revoking the old one.
+- After deploy, ensure at least one platform admin exists (`ROTBEH_BOOTSTRAP_PLATFORM_ADMIN_USERNAME` if needed).

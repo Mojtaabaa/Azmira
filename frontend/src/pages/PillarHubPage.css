@@ -1,0 +1,47 @@
+.pillar-hub__header {
+  margin-bottom: var(--space-5, 20px);
+}
+
+.pillar-hub__en {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--pillar-tone, var(--text-muted));
+}
+
+.pillar-hub--learn { --pillar-tone: var(--pillar-learn); }
+.pillar-hub--improve { --pillar-tone: var(--pillar-improve); }
+.pillar-hub--achieve { --pillar-tone: var(--pillar-achieve); }
+
+.pillar-hub__links {
+  list-style: none;
+  margin: 0 0 var(--space-5, 20px);
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.pillar-hub__link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-solid) 80%, transparent);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color var(--motion-fast, 160ms) var(--ease-out), background var(--motion-fast, 160ms) var(--ease-out);
+}
+
+.pillar-hub__link:hover {
+  border-color: color-mix(in srgb, var(--pillar-tone, var(--accent)) 35%, var(--border));
+  background: color-mix(in srgb, var(--pillar-tone, var(--accent)) 8%, var(--surface-solid));
+}
+
+.pillar-hub__link span {
+  color: var(--text-muted);
+  font-size: var(--text-sm, 0.875rem);
+}

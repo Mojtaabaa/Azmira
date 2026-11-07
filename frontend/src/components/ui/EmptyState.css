@@ -1,0 +1,54 @@
+.empty-state {
+  display: grid;
+  gap: var(--space-3, 12px);
+  justify-items: start;
+  padding: var(--space-5, 20px);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface-solid) 70%, transparent);
+}
+
+.empty-state__mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.empty-state--plan .empty-state__mark {
+  background: color-mix(in srgb, var(--pillar-plan) 16%, transparent);
+  border-color: color-mix(in srgb, var(--pillar-plan) 30%, var(--border));
+}
+
+.empty-state--learn .empty-state__mark {
+  background: color-mix(in srgb, var(--pillar-learn) 16%, transparent);
+  border-color: color-mix(in srgb, var(--pillar-learn) 30%, var(--border));
+}
+
+.empty-state--improve .empty-state__mark {
+  background: color-mix(in srgb, var(--pillar-improve) 16%, transparent);
+  border-color: color-mix(in srgb, var(--pillar-improve) 30%, var(--border));
+}
+
+.empty-state--achieve .empty-state__mark {
+  background: color-mix(in srgb, var(--pillar-achieve) 16%, transparent);
+  border-color: color-mix(in srgb, var(--pillar-achieve) 30%, var(--border));
+}
+
+.empty-state__title {
+  margin: 0;
+  font-size: var(--text-md, 1rem);
+  font-weight: 700;
+}
+
+.empty-state__copy {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm, 0.9rem);
+  line-height: 1.55;
+}
+
+.empty-state__action {
+  margin-top: 4px;
+}

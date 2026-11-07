@@ -6,7 +6,12 @@ namespace KonkoorHelp.Api.Services.Gamification;
 
 public sealed class OutboxPublisher(AppDbContext db)
 {
-    public async Task<Guid?> PublishAsync(
+    /// <summary>
+    /// Adds a pending outbox row to the current DbContext without saving.
+    /// Caller must SaveChanges (ideally inside an open transaction).
+    /// Returns existing id when the idempotency key is already tracked or persisted.
+    /// </summary>
+    public async Task<Guid> EnqueueAsync(
         Guid workspaceId,
         int? userId,
         string eventType,
@@ -18,6 +23,13 @@ public sealed class OutboxPublisher(AppDbContext db)
         DateTime? occurredAt = null)
     {
         var key = idempotencyKey.Length > 120 ? idempotencyKey[..120] : idempotencyKey;
+
+        var tracked = db.ChangeTracker.Entries<DomainOutbox>()
+            .FirstOrDefault(e => e.Entity.WorkspaceId == workspaceId
+                && e.Entity.EventType == eventType
+                && e.Entity.IdempotencyKey == key);
+        if (tracked is not null) return tracked.Entity.Id;
+
         var existing = await db.DomainOutbox.AsNoTracking()
             .Where(item => item.WorkspaceId == workspaceId && item.EventType == eventType && item.IdempotencyKey == key)
             .Select(item => (Guid?)item.Id)
@@ -55,7 +67,23 @@ public sealed class OutboxPublisher(AppDbContext db)
             NextAttemptAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
         });
+        return id;
+    }
 
+    public async Task<Guid?> PublishAsync(
+        Guid workspaceId,
+        int? userId,
+        string eventType,
+        string idempotencyKey,
+        object data,
+        CancellationToken cancellationToken,
+        string? correlationId = null,
+        int eventVersion = 1,
+        DateTime? occurredAt = null)
+    {
+        var id = await EnqueueAsync(
+            workspaceId, userId, eventType, idempotencyKey, data, cancellationToken,
+            correlationId, eventVersion, occurredAt);
         try
         {
             await db.SaveChangesAsync(cancellationToken);
@@ -64,11 +92,11 @@ public sealed class OutboxPublisher(AppDbContext db)
         catch (DbUpdateException)
         {
             db.ChangeTracker.Clear();
+            var key = idempotencyKey.Length > 120 ? idempotencyKey[..120] : idempotencyKey;
             return await db.DomainOutbox.AsNoTracking()
                 .Where(item => item.WorkspaceId == workspaceId && item.EventType == eventType && item.IdempotencyKey == key)
                 .Select(item => (Guid?)item.Id)
                 .FirstOrDefaultAsync(cancellationToken);
         }
     }
-
 }

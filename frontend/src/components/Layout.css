@@ -98,7 +98,50 @@
   color: var(--text-muted);
   font-size: 0.72rem;
   font-weight: 700;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
+
+.nav-group-label-en {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+  color: var(--pillar-tone, var(--text-muted));
+}
+
+.nav-group--plan { --pillar-tone: var(--pillar-plan); }
+.nav-group--learn { --pillar-tone: var(--pillar-learn); }
+.nav-group--improve { --pillar-tone: var(--pillar-improve); }
+.nav-group--achieve { --pillar-tone: var(--pillar-achieve); }
+
+.nav-group--plan .nav-link.is-active,
+.nav-link.is-pillar-plan.is-active {
+  background: color-mix(in srgb, var(--pillar-plan) 14%, transparent);
+  color: var(--text);
+}
+
+.nav-group--learn .nav-link.is-active,
+.nav-link.is-pillar-learn.is-active {
+  background: color-mix(in srgb, var(--pillar-learn) 14%, transparent);
+}
+
+.nav-group--improve .nav-link.is-active,
+.nav-link.is-pillar-improve.is-active {
+  background: color-mix(in srgb, var(--pillar-improve) 14%, transparent);
+}
+
+.nav-group--achieve .nav-link.is-active,
+.nav-link.is-pillar-achieve.is-active {
+  background: color-mix(in srgb, var(--pillar-achieve) 14%, transparent);
+}
+
+.nav-group--plan .nav-group-label-fa { color: var(--pillar-plan); }
+.nav-group--learn .nav-group-label-fa { color: var(--pillar-learn); }
+.nav-group--improve .nav-group-label-fa { color: var(--pillar-improve); }
+.nav-group--achieve .nav-group-label-fa { color: var(--pillar-achieve); }
 
 .sidebar-search,
 .topbar-search {
