@@ -15,7 +15,7 @@ public sealed class SessionService(AppDbContext db)
     public async Task<string> OpenAsync(HttpContext http, int userId, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        await db.AuthSessions.Where(session => session.ExpiresAt < now).ExecuteDeleteAsync(cancellationToken);
+        await DeleteSessionsAsync(session => session.ExpiresAt < now, cancellationToken);
 
         var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
             .TrimEnd('=')
@@ -47,20 +47,19 @@ public sealed class SessionService(AppDbContext db)
     {
         if (string.IsNullOrWhiteSpace(token)) return null;
         var hash = Hash(token);
-        var row = await db.AuthSessions
-            .AsNoTracking()
-            .Where(session => session.TokenHash == hash)
-            .Select(session => new { session.ExpiresAt, session.User.Id, session.User.Username })
-            .FirstOrDefaultAsync(cancellationToken);
+        var session = await db.AuthSessions.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.TokenHash == hash, cancellationToken);
+        if (session is null) return null;
 
-        if (row is null) return null;
-        if (row.ExpiresAt < DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
+        if (session.ExpiresAt < DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())
         {
-            await db.AuthSessions.Where(session => session.TokenHash == hash).ExecuteDeleteAsync(cancellationToken);
+            await DeleteSessionsAsync(item => item.TokenHash == hash, cancellationToken);
             return null;
         }
 
-        return new SessionUser(row.Id, row.Username);
+        var user = await db.Users.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == session.UserId && item.DeletedAt == null, cancellationToken);
+        return user is null ? null : new SessionUser(user.Id, user.Username);
     }
 
     public async Task CloseAsync(HttpContext http, CancellationToken cancellationToken)
@@ -68,7 +67,7 @@ public sealed class SessionService(AppDbContext db)
         if (http.Request.Cookies.TryGetValue(CookieName, out var token) && !string.IsNullOrWhiteSpace(token))
         {
             var hash = Hash(token);
-            await db.AuthSessions.Where(session => session.TokenHash == hash).ExecuteDeleteAsync(cancellationToken);
+            await DeleteSessionsAsync(session => session.TokenHash == hash, cancellationToken);
         }
 
         http.Response.Cookies.Delete(CookieName, new CookieOptions
@@ -84,5 +83,19 @@ public sealed class SessionService(AppDbContext db)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
         return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
+
+    private async Task DeleteSessionsAsync(System.Linq.Expressions.Expression<Func<AuthSession, bool>> predicate, CancellationToken cancellationToken)
+    {
+        if (db.Database.IsRelational())
+        {
+            await db.AuthSessions.Where(predicate).ExecuteDeleteAsync(cancellationToken);
+            return;
+        }
+
+        var rows = await db.AuthSessions.Where(predicate).ToListAsync(cancellationToken);
+        if (rows.Count == 0) return;
+        db.AuthSessions.RemoveRange(rows);
+        await db.SaveChangesAsync(cancellationToken);
     }
 }

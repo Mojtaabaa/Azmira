@@ -10,15 +10,17 @@ JSON camelCase. Errors: `{ "error": "…", "code": "…" }`.
 | Session cookie | `kh_session` (browser app) |
 | API key | Header `X-Api-Key: rk_…` |
 
-Workspace context: `X-Rotbeh-Workspace: {guid}` (required for most resources; API keys are bound to one or more workspaces).
+Workspace context: `X-Rotbeh-Workspace: {guid}` (required for most resources; API keys are bound to workspaces at creation).
 
-Create/revoke keys (session required):
+Create/revoke keys (session + **workspace admin** required):
 
 - `GET /api/integrations/api-clients`
-- `POST /api/integrations/api-clients` `{ "name", "scopes": ["*"] }`
+- `POST /api/integrations/api-clients` `{ "name", "scopes": ["gamification:read", …] }` — **scopes required**; empty scopes are rejected
 - `POST /api/integrations/api-clients/{id}/revoke`
 
-Scopes use `resource:action` (e.g. `sessions:read`). `*` grants all. Session auth ignores scopes.
+Scopes use `resource:action` (e.g. `sessions:read`). Wildcard `*` is allowed **only for platform administrators** (`PlatformRole >= 100`). Session auth ignores scopes.
+
+Suggested least-privilege scopes are returned from `GET /api/integrations/api-clients` as `suggestedScopes`.
 
 ## Endpoints
 
@@ -36,7 +38,7 @@ Scopes use `resource:action` (e.g. `sessions:read`). `*` grants all. Session aut
 | GET | `/assessments` | `assessments:read` | Catalog |
 | GET | `/assessments/{id}` | `assessments:read` | Detail (no answers) |
 | GET | `/analytics/me` | `analytics:read` | Profile + mastery |
-| GET | `/analytics/school` | `analytics:read` | School dashboard |
+| GET | `/analytics/school` | `analytics:read` | School dashboard (teacher+) |
 | GET | `/gamification/me` | `gamification:read` | XP / level / streak |
 | GET | `/quests` | `quests:read` | Active quests |
 | GET | `/achievements` | `achievements:read` | Badges |

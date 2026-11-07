@@ -1,6 +1,7 @@
 using System.Text.Json;
 using KonkoorHelp.Api.Data;
 using KonkoorHelp.Api.Services.Integrations;
+using Microsoft.EntityFrameworkCore;
 
 namespace KonkoorHelp.Api.Api;
 
@@ -16,19 +17,23 @@ public static class IntegrationEndpoints
             return Results.Json(await clients.ListAsync(user.Id, ws?.WorkspaceId, cancellationToken));
         });
 
-        group.MapPost("/integrations/api-clients", async (HttpContext http, ApiClientService clients, CancellationToken cancellationToken) =>
+        group.MapPost("/integrations/api-clients", async (HttpContext http, AppDbContext db, ApiClientService clients, CancellationToken cancellationToken) =>
         {
             if (WorkspaceAccess.RequireWorkspace(http) is { } denied) return denied;
-            var user = WorkspaceAccess.User(http);
+            var session = WorkspaceAccess.User(http);
             var ws = WorkspaceAccess.Workspace(http);
+            var account = await db.Users.AsNoTracking().FirstOrDefaultAsync(item => item.Id == session.Id, cancellationToken);
+            if (account is null) return Results.Json(new { error = "احراز هویت لازم است." }, statusCode: 401);
+
             var body = await JsonDocumentSafe.Read(http, cancellationToken);
             if (body is null) return Results.Json(new { error = "بدنه نامعتبر است." }, statusCode: 400);
             var name = body.RootElement.TryGetProperty("name", out var nameEl) ? nameEl.GetString() ?? "" : "";
             var scopes = ReadStringArray(body.RootElement, "scopes");
-            if (scopes.Length == 0) scopes = ["*"];
             try
             {
-                return Results.Json(await clients.CreateAsync(user.Id, name, ws.WorkspaceId, scopes, cancellationToken), statusCode: 201);
+                return Results.Json(
+                    await clients.CreateAsync(account.Id, account.PlatformRole, name, ws.WorkspaceId, scopes, cancellationToken),
+                    statusCode: 201);
             }
             catch (UnauthorizedAccessException error)
             {
@@ -57,7 +62,14 @@ public static class IntegrationEndpoints
         {
             if (WorkspaceAccess.RequireWorkspace(http) is { } denied) return denied;
             var ws = WorkspaceAccess.Workspace(http);
-            return Results.Json(await webhooks.ListEndpointsAsync(ws.WorkspaceId, cancellationToken));
+            try
+            {
+                return Results.Json(await webhooks.ListEndpointsAsync(ws.WorkspaceId, ws.UserId, cancellationToken));
+            }
+            catch (UnauthorizedAccessException error)
+            {
+                return Results.Json(new { error = error.Message }, statusCode: 403);
+            }
         });
 
         group.MapPost("/integrations/webhooks", async (HttpContext http, WebhookService webhooks, CancellationToken cancellationToken) =>
@@ -72,6 +84,10 @@ public static class IntegrationEndpoints
             {
                 return Results.Json(await webhooks.CreateEndpointAsync(ws.WorkspaceId, ws.UserId, url, events, cancellationToken), statusCode: 201);
             }
+            catch (UnauthorizedAccessException error)
+            {
+                return Results.Json(new { error = error.Message }, statusCode: 403);
+            }
             catch (InvalidOperationException error)
             {
                 return Results.Json(new { error = error.Message }, statusCode: 400);
@@ -84,7 +100,11 @@ public static class IntegrationEndpoints
             var ws = WorkspaceAccess.Workspace(http);
             try
             {
-                return Results.Json(await webhooks.DeactivateEndpointAsync(ws.WorkspaceId, id, cancellationToken));
+                return Results.Json(await webhooks.DeactivateEndpointAsync(ws.WorkspaceId, ws.UserId, id, cancellationToken));
+            }
+            catch (UnauthorizedAccessException error)
+            {
+                return Results.Json(new { error = error.Message }, statusCode: 403);
             }
             catch (InvalidOperationException error)
             {
@@ -96,7 +116,14 @@ public static class IntegrationEndpoints
         {
             if (WorkspaceAccess.RequireWorkspace(http) is { } denied) return denied;
             var ws = WorkspaceAccess.Workspace(http);
-            return Results.Json(await webhooks.ListDeliveriesAsync(ws.WorkspaceId, endpointId, cancellationToken));
+            try
+            {
+                return Results.Json(await webhooks.ListDeliveriesAsync(ws.WorkspaceId, ws.UserId, endpointId, cancellationToken));
+            }
+            catch (UnauthorizedAccessException error)
+            {
+                return Results.Json(new { error = error.Message }, statusCode: 403);
+            }
         });
 
         return group;

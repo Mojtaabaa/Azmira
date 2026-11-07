@@ -78,13 +78,19 @@ builder.Services.AddScoped<TeacherPortalService>();
 builder.Services.AddScoped<ParentPortalService>();
 builder.Services.AddScoped<SchoolAnalyticsService>();
 builder.Services.AddScoped<ApiClientService>();
+builder.Services.AddSingleton<WebhookSecretProtector>();
+builder.Services.AddSingleton<IWebhookDnsResolver, SystemWebhookDnsResolver>();
+builder.Services.AddSingleton<IWebhookSocketConnector, TcpWebhookSocketConnector>();
+builder.Services.AddSingleton<WebhookUrlSafety>();
 builder.Services.AddScoped<WebhookService>();
 builder.Services.Configure<AiOptions>(builder.Configuration.GetSection(AiOptions.SectionName));
+builder.Services.Configure<IntegrationsOptions>(builder.Configuration.GetSection(IntegrationsOptions.SectionName));
 builder.Services.AddHttpClient(nameof(OpenAiCompatibleProvider));
 builder.Services.AddHttpClient(nameof(WebhookService), client =>
 {
     client.Timeout = TimeSpan.FromSeconds(15);
-});
+}).ConfigurePrimaryHttpMessageHandler(sp =>
+    WebhookSocketsHttpHandlerFactory.Create(sp.GetRequiredService<IWebhookSocketConnector>()));
 builder.Services.AddSingleton<IAiProvider, NullAiProvider>();
 builder.Services.AddSingleton<IAiProvider, HeuristicAiProvider>();
 builder.Services.AddSingleton<IAiProvider, OpenAiCompatibleProvider>();
@@ -132,7 +138,14 @@ app.Use(async (context, next) =>
         app.Logger.LogError(error, "Unhandled API error");
         if (context.Response.HasStarted) throw;
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        await context.Response.WriteAsJsonAsync(new { error = "خطای سرور." });
+        if (app.Environment.IsEnvironment("Testing"))
+        {
+            await context.Response.WriteAsJsonAsync(new { error = "خطای سرور.", detail = error.ToString() });
+        }
+        else
+        {
+            await context.Response.WriteAsJsonAsync(new { error = "خطای سرور." });
+        }
     }
 });
 

@@ -35,8 +35,16 @@
 3. Configure `Security__AllowedOrigins` for any extra browser clients.
 4. Issue API keys/webhooks only over HTTPS endpoints.
 
+## Phase 7.2 release-gate remediation (applied, uncommitted until approved)
+
+- Untracked `backend.Tests/bin|obj`; gitignore updated
+- Webhook/API-client admin RBAC; SSRF URL safety at register+dispatch; DNS IP pinning on connect; redirects disabled
+- Explicit API scopes; `*` only for platform admins
+- Webhook secrets AES-GCM at rest (`Integrations__WebhookProtectionKey`)
+- HTTP integration tests for authz/SSRF/scopes
+
 ## Residual / follow-ups (non-blocking)
 
-- Broader HTTP-level IDOR matrix in CI
-- Optional CDN/cache only if leaderboard load warrants it
-- Upgrade transitive `System.Security.Cryptography.Pkcs` when upstream fixes land
+- Webhook delivery lease / stronger dedupe under multi-instance
+- Dual-key re-encrypt job for webhook secret rotation
+- Upgrade transitive `System.Security.Cryptography.Pkcs` when upstream fixes land (not upgraded in 7.2)

@@ -16,6 +16,7 @@ Set secrets via environment variables or a secret store — **never** commit pro
 | AI provider | `Ai__DefaultProvider` | `heuristic` / `null` / OpenAI-compatible |
 | OpenAI key | `Ai__OpenAiApiKey` | Optional; leave empty if unused |
 | Allowed Origins | `Security__AllowedOrigins__0` | Extra browser origins beyond same-host + Vite |
+| Webhook secret key | `Integrations__WebhookProtectionKey` | Base64 32-byte AES-GCM key; required in Production |
 
 Production refuses to start if the connection string is empty.
 

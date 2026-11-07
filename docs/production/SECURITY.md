@@ -12,7 +12,9 @@
 | Rate limiting | Pass | Login/register AttemptLimiter; API key ~120/min |
 | Input validation | Pass | StudyValidation, auth regex/length, webhook URL scheme checks |
 | File upload | Pass | Body size cap 48MB; notes pipeline constraints |
-| Sensitive data | Pass | Passwords hashed; API keys shown once; production connection string not committed |
+| Sensitive data | Pass | Passwords hashed; API keys shown once; webhook secrets AES-GCM at rest; production connection string not committed |
+| Webhook SSRF | Pass | Public HTTPS only; private/metadata IPs blocked; DNS re-checked + IP-pinned connect at dispatch; redirects disabled; TLS verification kept |
+| Integration RBAC | Pass | Webhook/API-client management limited to workspace admins; `*` scopes require platform admin |
 | Session security | Pass | Token hashed at rest; expiry cleanup |
 
 Residual: expand automated HTTP IDOR matrix over time; keep AllowedOrigins configured in prod.

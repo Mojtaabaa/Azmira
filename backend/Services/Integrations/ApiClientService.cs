@@ -11,19 +11,36 @@ public sealed class ApiClientService(AppDbContext db)
     public const string ItemKey = "apiClient";
     public const string HeaderName = "X-Api-Key";
 
-    public async Task<object> CreateAsync(int ownerUserId, string name, Guid workspaceId, IEnumerable<string> scopes, CancellationToken cancellationToken)
+    public static readonly string[] SuggestedLeastPrivilegeScopes =
+    [
+        "workspaces:read",
+        "sessions:read",
+        "gamification:read",
+    ];
+
+    public async Task<object> CreateAsync(
+        int ownerUserId,
+        byte platformRole,
+        string name,
+        Guid workspaceId,
+        IEnumerable<string> scopes,
+        CancellationToken cancellationToken)
     {
+        await IntegrationAccess.EnsureCanManageIntegrationsAsync(db, workspaceId, ownerUserId, cancellationToken);
+
         if (string.IsNullOrWhiteSpace(name)) throw new InvalidOperationException("نام کلاینت لازم است.");
-        var member = await db.WorkspaceMembers.AsNoTracking().AnyAsync(
-            item => item.WorkspaceId == workspaceId && item.UserId == ownerUserId && item.Status == WorkspaceMemberStatus.Active
-                && (item.Role == WorkspaceMemberRole.SchoolOwner
-                    || item.Role == WorkspaceMemberRole.SchoolAdministrator
-                    || item.Role == WorkspaceMemberRole.Student),
-            cancellationToken);
-        var workspace = await db.Workspaces.AsNoTracking().FirstOrDefaultAsync(item => item.Id == workspaceId, cancellationToken)
-            ?? throw new InvalidOperationException("فضا پیدا نشد.");
-        if (!member && workspace.OwnerUserId != ownerUserId)
-            throw new UnauthorizedAccessException("اجازه ساخت کلید API نداری.");
+
+        var normalized = scopes
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (normalized.Length == 0)
+            throw new InvalidOperationException("حداقل یک scope صریح لازم است. مقدار پیش‌فرض * دیگر اعمال نمی‌شود.");
+
+        if (normalized.Any(item => item == "*") && !IntegrationAccess.IsPlatformAdministrator(platformRole))
+            throw new UnauthorizedAccessException("فقط مدیران پلتفرم می‌توانند scope همه (*) صادر کنند.");
 
         var raw = "rk_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
         var prefix = raw[..12];
@@ -35,7 +52,7 @@ public sealed class ApiClientService(AppDbContext db)
             KeyHash = Hash(raw),
             OwnerUserId = ownerUserId,
             Active = true,
-            ScopesJson = JsonSerializer.Serialize(scopes.Distinct(StringComparer.OrdinalIgnoreCase).ToArray()),
+            ScopesJson = JsonSerializer.Serialize(normalized),
             CreatedAt = DateTime.UtcNow,
         };
         db.ApiClients.Add(client);
@@ -54,7 +71,7 @@ public sealed class ApiClientService(AppDbContext db)
             keyPrefix = client.KeyPrefix,
             apiKey = raw, // shown once
             workspaceId,
-            scopes = scopes,
+            scopes = normalized,
             note = "این کلید فقط یک‌بار نمایش داده می‌شود. آن را در جای امن ذخیره کن.",
         };
     }
@@ -82,7 +99,7 @@ public sealed class ApiClientService(AppDbContext db)
                 createdAt = item.CreatedAt,
             })
             .ToListAsync(cancellationToken);
-        return new { items };
+        return new { items, suggestedScopes = SuggestedLeastPrivilegeScopes };
     }
 
     public async Task<object> RevokeAsync(int ownerUserId, Guid clientId, CancellationToken cancellationToken)

@@ -8,7 +8,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KonkoorHelp.Api.Services.Integrations;
 
-public sealed class WebhookService(AppDbContext db, IHttpClientFactory httpClientFactory, ILogger<WebhookService> logger)
+public sealed class WebhookService(
+    AppDbContext db,
+    IHttpClientFactory httpClientFactory,
+    WebhookSecretProtector secrets,
+    WebhookUrlSafety urlSafety,
+    ILogger<WebhookService> logger)
 {
     public static readonly string[] SupportedEvents =
     [
@@ -28,20 +33,19 @@ public sealed class WebhookService(AppDbContext db, IHttpClientFactory httpClien
         IEnumerable<string> eventTypes,
         CancellationToken cancellationToken)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != "https" && uri.Scheme != "http"))
-            throw new InvalidOperationException("URL وب‌هوک نامعتبر است.");
-        if (uri.Scheme == "http" && uri.Host is not ("localhost" or "127.0.0.1"))
-            throw new InvalidOperationException("در محیط غیرمحلی فقط HTTPS مجاز است.");
+        await IntegrationAccess.EnsureCanManageIntegrationsAsync(db, workspaceId, userId, cancellationToken);
+        await urlSafety.EnsureSafeAsync(url, cancellationToken);
 
         var events = eventTypes.Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         if (events.Length == 0) throw new InvalidOperationException("حداقل یک نوع رویداد لازم است.");
 
+        var rawSecret = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
         var endpoint = new WebhookEndpoint
         {
             Id = Guid.NewGuid(),
             WorkspaceId = workspaceId,
             Url = url.Trim(),
-            Secret = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant(),
+            Secret = secrets.Protect(rawSecret),
             EventTypesJson = JsonSerializer.Serialize(events),
             Active = true,
             CreatedByUserId = userId,
@@ -54,14 +58,15 @@ public sealed class WebhookService(AppDbContext db, IHttpClientFactory httpClien
         {
             id = endpoint.Id,
             url = endpoint.Url,
-            secret = endpoint.Secret,
+            secret = rawSecret, // plaintext shown once; DB stores ciphertext
             eventTypes = events,
-            note = "secret را برای تأیید امضای X-Rotbeh-Signature نگه دار.",
+            note = "secret را برای تأیید امضای X-Rotbeh-Signature نگه دار. دوباره نمایش داده نمی‌شود.",
         };
     }
 
-    public async Task<object> DeactivateEndpointAsync(Guid workspaceId, Guid endpointId, CancellationToken cancellationToken)
+    public async Task<object> DeactivateEndpointAsync(Guid workspaceId, int userId, Guid endpointId, CancellationToken cancellationToken)
     {
+        await IntegrationAccess.EnsureCanManageIntegrationsAsync(db, workspaceId, userId, cancellationToken);
         var endpoint = await db.WebhookEndpoints.FirstOrDefaultAsync(
             item => item.Id == endpointId && item.WorkspaceId == workspaceId, cancellationToken)
             ?? throw new InvalidOperationException("وب‌هوک پیدا نشد.");
@@ -71,8 +76,9 @@ public sealed class WebhookService(AppDbContext db, IHttpClientFactory httpClien
         return new { ok = true };
     }
 
-    public async Task<object> ListEndpointsAsync(Guid workspaceId, CancellationToken cancellationToken)
+    public async Task<object> ListEndpointsAsync(Guid workspaceId, int userId, CancellationToken cancellationToken)
     {
+        await IntegrationAccess.EnsureCanManageIntegrationsAsync(db, workspaceId, userId, cancellationToken);
         var items = await db.WebhookEndpoints.AsNoTracking()
             .Where(item => item.WorkspaceId == workspaceId)
             .OrderByDescending(item => item.CreatedAt)
@@ -88,8 +94,9 @@ public sealed class WebhookService(AppDbContext db, IHttpClientFactory httpClien
         return new { items, supportedEvents = SupportedEvents };
     }
 
-    public async Task<object> ListDeliveriesAsync(Guid workspaceId, Guid? endpointId, CancellationToken cancellationToken)
+    public async Task<object> ListDeliveriesAsync(Guid workspaceId, int userId, Guid? endpointId, CancellationToken cancellationToken)
     {
+        await IntegrationAccess.EnsureCanManageIntegrationsAsync(db, workspaceId, userId, cancellationToken);
         var query = db.WebhookDeliveries.AsNoTracking().Where(item => item.WorkspaceId == workspaceId);
         if (endpointId is Guid id) query = query.Where(item => item.WebhookEndpointId == id);
         var items = await query.OrderByDescending(item => item.CreatedAt).Take(100)
@@ -125,6 +132,17 @@ public sealed class WebhookService(AppDbContext db, IHttpClientFactory httpClien
         foreach (var endpoint in endpoints)
         {
             if (!Subscribes(endpoint, mappedType) && !Subscribes(endpoint, eventType)) continue;
+            string signingSecret;
+            try
+            {
+                signingSecret = secrets.Unprotect(endpoint.Secret);
+            }
+            catch (Exception error)
+            {
+                logger.LogError(error, "Cannot unprotect webhook secret for endpoint {EndpointId}", endpoint.Id);
+                continue;
+            }
+
             var body = JsonSerializer.Serialize(new
             {
                 id = eventId ?? Guid.NewGuid(),
@@ -133,7 +151,7 @@ public sealed class WebhookService(AppDbContext db, IHttpClientFactory httpClien
                 occurredAt = DateTime.UtcNow,
                 data = payload,
             }, GamificationJson.Options);
-            var signature = Sign(endpoint.Secret, body);
+            var signature = Sign(signingSecret, body);
             db.WebhookDeliveries.Add(new WebhookDelivery
             {
                 Id = Guid.NewGuid(),
@@ -180,6 +198,8 @@ public sealed class WebhookService(AppDbContext db, IHttpClientFactory httpClien
             delivery.Attempts += 1;
             try
             {
+                var target = await urlSafety.ResolveValidatedAsync(delivery.Endpoint.Url, cancellationToken);
+
                 using var request = new HttpRequestMessage(HttpMethod.Post, delivery.Endpoint.Url);
                 request.Content = new StringContent(delivery.PayloadJson, Encoding.UTF8, "application/json");
                 request.Headers.TryAddWithoutValidation("X-Rotbeh-Signature", delivery.Signature);
@@ -187,18 +207,37 @@ public sealed class WebhookService(AppDbContext db, IHttpClientFactory httpClien
                 request.Headers.TryAddWithoutValidation("X-Rotbeh-Delivery", delivery.Id.ToString("N"));
                 request.Headers.UserAgent.Add(new ProductInfoHeaderValue("RotbehWebhook", "1.0"));
 
-                using var response = await client.SendAsync(request, cancellationToken);
-                delivery.LastStatusCode = (int)response.StatusCode;
-                if ((int)response.StatusCode is >= 200 and < 300)
+                using (WebhookOutboundPin.Begin(new WebhookOutboundPin.PinState(
+                           target.Host,
+                           target.Port,
+                           target.Addresses,
+                           target.Uri)))
                 {
-                    delivery.Status = WebhookDeliveryStatus.Succeeded;
-                    delivery.DeliveredAt = DateTime.UtcNow;
-                    delivery.LastError = null;
+                    using var response = await client.SendAsync(request, cancellationToken);
+                    delivery.LastStatusCode = (int)response.StatusCode;
+
+                    // Redirects are disabled on the named client; treat 3xx as failure.
+                    if ((int)response.StatusCode is >= 300 and < 400)
+                    {
+                        ScheduleRetry(delivery, $"redirect blocked HTTP {(int)response.StatusCode}");
+                    }
+                    else if ((int)response.StatusCode is >= 200 and < 300)
+                    {
+                        delivery.Status = WebhookDeliveryStatus.Succeeded;
+                        delivery.DeliveredAt = DateTime.UtcNow;
+                        delivery.LastError = null;
+                    }
+                    else
+                    {
+                        ScheduleRetry(delivery, $"HTTP {(int)response.StatusCode}");
+                    }
                 }
-                else
-                {
-                    ScheduleRetry(delivery, $"HTTP {(int)response.StatusCode}");
-                }
+            }
+            catch (InvalidOperationException safety)
+            {
+                logger.LogWarning(safety, "Webhook delivery {DeliveryId} blocked by URL safety", delivery.Id);
+                delivery.Status = WebhookDeliveryStatus.DeadLetter;
+                delivery.LastError = safety.Message.Length > 400 ? safety.Message[..400] : safety.Message;
             }
             catch (Exception error)
             {
