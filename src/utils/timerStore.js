@@ -8,7 +8,7 @@ const LEGACY_TIMER_KEY = 'konkoor-help-timer'
 const PHASE_LABELS = {
   focus: 'تمرکز',
   shortBreak: 'استراحت کوتاه',
-  longBreak: 'استراحت بلند',
+  longBreak: 'استراحت طولانی',
 }
 
 let timerKey = null
@@ -58,6 +58,25 @@ function isFocusSession(value) {
   )
 }
 
+function pausedMsOf(focusSession) {
+  const base = Number(focusSession?.pausedMs)
+  const started = Number(focusSession?.pauseStartedAt)
+  let total = Number.isFinite(base) && base > 0 ? base : 0
+  if (Number.isFinite(started) && started > 0) {
+    total += Math.max(0, Date.now() - started)
+  }
+  return total
+}
+
+function withClosedPause(focusSession) {
+  if (!focusSession) return null
+  return {
+    ...focusSession,
+    pausedMs: pausedMsOf(focusSession),
+    pauseStartedAt: null,
+  }
+}
+
 function readSavedRaw() {
   if (!timerKey || typeof localStorage === 'undefined') return null
   try {
@@ -83,12 +102,14 @@ function loadState() {
     const targetTopic = typeof saved.targetTopic === 'string'
       ? saved.targetTopic
       : (focusSession?.topic || '')
+    const paused = Boolean(saved.paused)
+    const endsAt = !paused && typeof saved.endsAt === 'number' ? saved.endsAt : null
     return {
       phase,
-      running: Boolean(saved.running && saved.endsAt),
-      paused: Boolean(saved.paused),
+      running: !paused && Boolean(saved.running && endsAt),
+      paused,
       remainingMs: Number.isFinite(remainingMs) && remainingMs > 0 ? remainingMs : fullDuration(phase),
-      endsAt: typeof saved.endsAt === 'number' ? saved.endsAt : null,
+      endsAt,
       now: Date.now(),
       cycleCount: Number.isInteger(saved.cycleCount)
         ? Math.min(4, Math.max(0, saved.cycleCount))
@@ -122,12 +143,16 @@ function persist() {
 
 function updateTitle() {
   if (typeof document === 'undefined') return
+  const label = PHASE_LABELS[state.phase] || 'تمرکز'
+  if (state.paused) {
+    document.title = `توقف ${formatClock(state.remainingMs)} · ${label}`
+    return
+  }
   if (!state.running || typeof state.endsAt !== 'number') {
     document.title = 'رتبه'
     return
   }
-  const label = PHASE_LABELS[state.phase] || 'تمرکز'
-  document.title = `${formatClock(state.endsAt - Date.now())} · ${label}`
+  document.title = `${formatClock(Math.max(0, state.endsAt - Date.now()))} · ${label}`
 }
 
 function stopTicker() {
@@ -137,9 +162,12 @@ function stopTicker() {
 }
 
 function tick() {
-  if (!state.running) return
+  if (!state.running || state.paused || typeof state.endsAt !== 'number') {
+    stopTicker()
+    return
+  }
   checkComplete()
-  if (!state.running) return
+  if (!state.running || state.paused) return
   state = { ...state, now: Date.now() }
   emit()
   updateTitle()
@@ -152,15 +180,26 @@ function ensureTicker() {
 
 function saveFocusSession(focusSession) {
   try {
-    addOne('sessions', {
+    const pausedMs = pausedMsOf(focusSession)
+    const session = {
       id: focusSession.id,
       subject: focusSession.subject,
       topic: focusSession.topic,
       startTime: focusSession.startedAt,
       durationMinutes: focusSession.durationMinutes,
+      pausedSeconds: Math.round(pausedMs / 1000),
       type: 'pomodoro',
       note: '',
-    })
+    }
+    addOne('sessions', session)
+    try {
+      // Lazy import avoids circular load with storage helpers.
+      import('./timerPlanner').then(({ addPlannerEventForSession }) => {
+        addPlannerEventForSession(session)
+      })
+    } catch {
+      /* ignore planner sync errors */
+    }
     return 'جلسه تمرکز ذخیره شد.'
   } catch (error) {
     if (String(error.message).includes('تکراری') || String(error.message).includes('already exists')) {
@@ -177,7 +216,7 @@ function checkComplete() {
   completing = true
   stopTicker()
   const finishedPhase = state.phase
-  const finishedSession = state.focusSession
+  const finishedSession = withClosedPause(state.focusSession)
   const cycle = nextPhaseAfterComplete(finishedPhase, state.cycleCount)
   const notice = finishedPhase === 'focus' && finishedSession
     ? saveFocusSession(finishedSession)
@@ -265,7 +304,11 @@ export function startTimer({ subject, topic } = {}) {
       topic: cleanTopic,
       startedAt: new Date().toISOString(),
       durationMinutes: readSettings().pomodoroWork,
+      pausedMs: 0,
+      pauseStartedAt: null,
     }
+  } else if (focusSession) {
+    focusSession = withClosedPause(focusSession)
   }
 
   unlockSound()
@@ -288,12 +331,21 @@ export function startTimer({ subject, topic } = {}) {
 export function pauseTimer() {
   if (!state.running || typeof state.endsAt !== 'number') return
   stopTicker()
+  const remainingMs = Math.max(0, state.endsAt - Date.now())
+  const focusSession = state.focusSession
+    ? {
+        ...state.focusSession,
+        pauseStartedAt: Date.now(),
+      }
+    : null
   commit({
     ...state,
+    focusSession,
     running: false,
     paused: true,
-    remainingMs: Math.max(0, state.endsAt - Date.now()),
+    remainingMs,
     endsAt: null,
+    now: Date.now(),
   })
 }
 
@@ -302,7 +354,8 @@ export function finishFocusEarly() {
   if (!state.running && !state.paused) return
 
   stopTicker()
-  const plannedMs = state.focusSession.durationMinutes * 60 * 1000
+  const closed = withClosedPause(state.focusSession)
+  const plannedMs = closed.durationMinutes * 60 * 1000
   const remainingMs = state.running && typeof state.endsAt === 'number'
     ? Math.max(0, state.endsAt - Date.now())
     : Math.max(0, state.remainingMs)
@@ -312,10 +365,11 @@ export function finishFocusEarly() {
   let notice = 'زمانی نگذشته که ذخیره شود.'
 
   if (minutes > 0) {
-    const saved = saveFocusSession({ ...state.focusSession, durationMinutes: minutes })
+    const saved = saveFocusSession({ ...closed, durationMinutes: minutes })
     if (saved !== 'جلسه تمرکز ذخیره شد.') {
       commit({
         ...state,
+        focusSession: closed,
         running: false,
         paused: true,
         remainingMs,

@@ -8,7 +8,7 @@ import './MiniTimer.css'
 const PHASE_LABELS = {
   focus: 'تمرکز',
   shortBreak: 'استراحت کوتاه',
-  longBreak: 'استراحت بلند',
+  longBreak: 'استراحت طولانی',
 }
 
 export default function MiniTimer() {

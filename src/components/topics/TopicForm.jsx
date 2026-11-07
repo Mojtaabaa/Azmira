@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import SubjectField from '../SubjectField'
+import TopicField from '../TopicField'
 import { subjectFromForm } from '../../utils/subjects'
 import { buildTopic } from '../../utils/topics'
 
@@ -33,13 +34,11 @@ export default function TopicForm({ existing, onCreate }) {
       </label>
       <label>
         مبحث
-        <input
-          dir="auto"
+        <TopicField
+          subject={subject}
           value={name}
-          maxLength={80}
-          autoComplete="off"
-          onChange={(event) => {
-            setName(event.target.value)
+          onChange={(next) => {
+            setName(next)
             setError('')
           }}
         />

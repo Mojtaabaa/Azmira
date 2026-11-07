@@ -5,7 +5,7 @@ import { updateSettings } from '../../utils/storage'
 const FIELDS = [
   { key: 'pomodoroWork', label: 'تمرکز' },
   { key: 'pomodoroBreak', label: 'استراحت' },
-  { key: 'longBreak', label: 'استراحت بلند' },
+  { key: 'longBreak', label: 'استراحت طولانی' },
 ]
 
 export default function TimerLengthForm() {
@@ -32,6 +32,14 @@ export default function TimerLengthForm() {
     <section className="card" id="timer-lengths">
       <h2>زمان‌سنج</h2>
       <p className="card-copy">اگر زمان‌سنج در حال کار باشد، عدد جدید از دور بعد اعمال می‌شود.</p>
+      <label className="check-row">
+        <input
+          type="checkbox"
+          checked={settings.syncSessionsToPlanner !== false}
+          onChange={(event) => updateSettings({ syncSessionsToPlanner: event.target.checked })}
+        />
+        <span>بعد از هر تمرکز، همان جلسه در برنامه هفتگی هم ثبت شود.</span>
+      </label>
       <form className="length-form" noValidate onSubmit={(event) => event.preventDefault()}>
         {FIELDS.map((field) => (
           <label key={field.key}>

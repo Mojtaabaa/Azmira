@@ -1,14 +1,25 @@
 import { useState } from 'react'
+import SubjectWeeklyGoalsForm from './SubjectWeeklyGoalsForm'
 import { useSettings } from '../../hooks/useSettings'
 import { updateSettings } from '../../utils/storage'
 
 const DAY_MAX = 24
 const WEEK_MAX = 168
+const STEP_HOURS = 0.25
 
-function wholeHours(text, max) {
-  const value = Number(text)
-  if (!Number.isInteger(value) || value < 1 || value > max) return null
-  return value
+function hoursToMinutes(text, max) {
+  const value = Number(String(text).trim().replace(',', '.'))
+  if (!Number.isFinite(value) || value < STEP_HOURS || value > max) return null
+  const minutes = Math.round(value * 60)
+  if (minutes < 15 || minutes > max * 60) return null
+  if (minutes % 15 !== 0) return null
+  return minutes
+}
+
+function displayHours(minutes) {
+  const hours = (Number(minutes) || 0) / 60
+  const rounded = Math.round(hours * 100) / 100
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded)
 }
 
 export default function DailyGoalForm() {
@@ -16,29 +27,27 @@ export default function DailyGoalForm() {
   const [draft, setDraft] = useState(null)
   const [weekDraft, setWeekDraft] = useState(null)
   const [error, setError] = useState('')
-  const shown = draft === null ? settings.dailyGoalMinutes / 60 : draft
-  const weekShown = weekDraft === null ? settings.weeklyGoalMinutes / 60 : weekDraft
+  const shown = draft === null ? displayHours(settings.dailyGoalMinutes) : draft
+  const weekShown = weekDraft === null ? displayHours(settings.weeklyGoalMinutes) : weekDraft
 
   function commit(text) {
-    const hours = wholeHours(text, DAY_MAX)
+    const minutes = hoursToMinutes(text, DAY_MAX)
     setDraft(null)
-    if (hours == null) {
-      setError('هدف روزانه باید یک عدد از 1 تا 24 ساعت باشد.')
+    if (minutes == null) {
+      setError('هدف روزانه را مثل 4.5 بنویس (از ۰٫۲۵ تا ۲۴ ساعت).')
       return
     }
-    const minutes = hours * 60
     if (minutes !== settings.dailyGoalMinutes) updateSettings({ dailyGoalMinutes: minutes })
     setError('')
   }
 
   function commitWeek(text) {
-    const hours = wholeHours(text, WEEK_MAX)
+    const minutes = hoursToMinutes(text, WEEK_MAX)
     setWeekDraft(null)
-    if (hours == null) {
-      setError('هدف هفته باید یک عدد از 1 تا 168 ساعت باشد.')
+    if (minutes == null) {
+      setError('هدف هفتگی را مثل 28.5 بنویس (از ۰٫۲۵ تا ۱۶۸ ساعت).')
       return
     }
-    const minutes = hours * 60
     if (minutes !== settings.weeklyGoalMinutes) updateSettings({ weeklyGoalMinutes: minutes })
     setError('')
   }
@@ -46,23 +55,24 @@ export default function DailyGoalForm() {
   return (
     <section className="card" id="daily-goal">
       <h2>هدف مطالعه</h2>
-      <p className="card-copy">پیشخوان امروز را با هدف روزانه و این هفته را با هدف هفتگی مقایسه می‌کند.</p>
+      <p className="card-copy">می‌توانی عدد اعشاری بزنی؛ مثلاً ۴٫۵ برای چهار و نیم ساعت. گام‌ها ۱۵ دقیقه‌ای‌اند.</p>
       <form className="length-form" noValidate onSubmit={(event) => event.preventDefault()}>
         <label>
           <span>هر روز</span>
           <input
             type="number"
-            inputMode="numeric"
-            min="1"
+            inputMode="decimal"
+            min={STEP_HOURS}
             max={DAY_MAX}
+            step={STEP_HOURS}
             aria-label="هدف روزانه"
             value={shown}
             onChange={(event) => {
               const text = event.target.value
               setDraft(text)
-              const hours = wholeHours(text, DAY_MAX)
-              if (hours == null) return
-              updateSettings({ dailyGoalMinutes: hours * 60 })
+              const minutes = hoursToMinutes(text, DAY_MAX)
+              if (minutes == null) return
+              updateSettings({ dailyGoalMinutes: minutes })
               setError('')
             }}
             onBlur={(event) => commit(event.target.value)}
@@ -76,17 +86,18 @@ export default function DailyGoalForm() {
           <span>هر هفته</span>
           <input
             type="number"
-            inputMode="numeric"
-            min="1"
+            inputMode="decimal"
+            min={STEP_HOURS}
             max={WEEK_MAX}
-            aria-label="هدف هفته"
+            step={STEP_HOURS}
+            aria-label="هدف هفتگی"
             value={weekShown}
             onChange={(event) => {
               const text = event.target.value
               setWeekDraft(text)
-              const hours = wholeHours(text, WEEK_MAX)
-              if (hours == null) return
-              updateSettings({ weeklyGoalMinutes: hours * 60 })
+              const minutes = hoursToMinutes(text, WEEK_MAX)
+              if (minutes == null) return
+              updateSettings({ weeklyGoalMinutes: minutes })
               setError('')
             }}
             onBlur={(event) => commitWeek(event.target.value)}
@@ -98,6 +109,7 @@ export default function DailyGoalForm() {
         </label>
       </form>
       {error ? <p className="form-message is-error" role="alert">{error}</p> : null}
+      <SubjectWeeklyGoalsForm embedded />
     </section>
   )
 }

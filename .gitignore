@@ -10,6 +10,10 @@ lerna-debug.log*
 node_modules
 server/data
 dist
+backend/bin
+backend/obj
+backend/wwwroot
+publish
 dist-ssr
 *.local
 

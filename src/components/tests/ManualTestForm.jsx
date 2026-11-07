@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import DatePicker from '../DatePicker'
 import SubjectField from '../SubjectField'
+import TopicField from '../TopicField'
+import { normalizeTopicName } from '../../utils/topics'
 import { todayInputValue } from '../../utils/clock'
 import { formatKonkoorPercentage } from '../../utils/score'
 import { addOne, updateOne } from '../../utils/storage'
@@ -66,7 +68,11 @@ export default function ManualTestForm({ test, onSaved, onCancel }) {
       return
     }
 
-    const result = buildManualTest({ ...form, subject: subject.id })
+    const result = buildManualTest({
+      ...form,
+      subject: subject.id,
+      topic: normalizeTopicName(form.topic),
+    })
     if (result.error) {
       setError(result.error)
       return
@@ -112,12 +118,10 @@ export default function ManualTestForm({ test, onSaved, onCancel }) {
         </label>
         <label>
           مبحث
-          <input
-            dir="auto"
+          <TopicField
+            subject={form.subject}
             value={form.topic}
-            maxLength={80}
-            autoComplete="off"
-            onChange={(event) => update('topic', event.target.value)}
+            onChange={(next) => update('topic', next)}
           />
         </label>
         <label>

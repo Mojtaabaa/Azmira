@@ -1,4 +1,4 @@
-export default function WeekNav({ label, jalaliLabel, onPrevious, onNext, onToday }) {
+export default function WeekNav({ label, onPrevious, onNext, onToday }) {
   return (
     <div className="week-nav">
       <div className="button-row">
@@ -8,7 +8,6 @@ export default function WeekNav({ label, jalaliLabel, onPrevious, onNext, onToda
       </div>
       <p className="week-label">
         <strong>{label}</strong>
-        {jalaliLabel ? <span>{jalaliLabel}</span> : null}
       </p>
     </div>
   )

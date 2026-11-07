@@ -1,0 +1,91 @@
+.app-cmd-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: start center;
+  padding: 12vh 16px 16px;
+  background: var(--overlay);
+  backdrop-filter: blur(8px) saturate(1.15);
+  -webkit-backdrop-filter: blur(8px) saturate(1.15);
+  animation: soft-fade 180ms var(--ease-out) both;
+}
+
+.app-cmd-modal {
+  width: min(560px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface-solid) 78%, transparent);
+  box-shadow: var(--shadow-lift);
+  overflow: hidden;
+  backdrop-filter: blur(22px) saturate(1.25);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+  animation: sheet-up 280ms var(--ease-out) both;
+}
+
+.app-cmd-modal input {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  padding: 16px 18px;
+  outline: none;
+}
+
+.app-cmd-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  max-height: min(50vh, 420px);
+  overflow: auto;
+}
+
+.app-cmd-list button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  text-align: start;
+  padding: 10px 12px;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+
+.app-cmd-list button:hover,
+.app-cmd-list button:focus-visible {
+  background: var(--hover);
+  transform: translateX(-2px);
+}
+
+.app-cmd-group {
+  color: var(--muted);
+  font-size: 0.75rem;
+  min-width: 3.2rem;
+}
+
+.app-cmd-hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.app-cmd-empty {
+  color: var(--muted);
+  padding: 16px 12px;
+  text-align: center;
+}
+
+.app-cmd-hint-line {
+  margin: 0;
+  padding: 8px 14px 12px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  border-top: 1px solid var(--line);
+}

@@ -1,7 +1,7 @@
 const PHASES = [
   { id: 'focus', label: 'تمرکز' },
   { id: 'shortBreak', label: 'استراحت کوتاه' },
-  { id: 'longBreak', label: 'استراحت بلند' },
+  { id: 'longBreak', label: 'استراحت طولانی' },
 ]
 
 export default function PhaseTabs({ phase, cycleCount, locked, onSelect }) {

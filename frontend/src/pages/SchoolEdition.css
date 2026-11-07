@@ -1,0 +1,128 @@
+.school-page {
+  display: grid;
+  gap: 18px;
+  padding-block: 8px 28px;
+}
+
+.school-hero h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2vw, 1.9rem);
+}
+
+.school-kicker {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.school-sub,
+.muted {
+  color: var(--muted);
+}
+
+.school-error {
+  color: #b91c1c;
+}
+
+.school-ok {
+  color: #047857;
+}
+
+.school-panel {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--surface, #fff) 88%, #0369a1 12%);
+}
+
+.school-panel h2 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+}
+
+.school-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.school-row input,
+.school-row select,
+.school-row button,
+.school-list button {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--surface, #fff);
+  color: var(--text);
+}
+
+.school-row input {
+  min-width: 140px;
+  flex: 1;
+}
+
+.school-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.school-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface, #fff) 80%, transparent);
+}
+
+.school-facts {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  overflow: auto;
+  font-size: 0.8rem;
+  background: color-mix(in srgb, var(--surface, #fff) 70%, #0f172a 8%);
+}
+
+.school-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.school-stats div {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface, #fff) 75%, #0284c7 12%);
+}
+
+.school-stats strong {
+  font-size: 1.3rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .school-panel {
+    animation: school-in 200ms ease-out;
+  }
+}
+
+@keyframes school-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

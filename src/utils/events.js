@@ -62,9 +62,28 @@ export function eventsOnDay(events, day) {
 
 export const GRID_START = 6 * 60
 export const GRID_END = 24 * 60
-export const SLOT_MINUTES = 30
-export const SLOT_PX = 28
+export const SLOT_MINUTES = 15
+export const SLOT_PX = 18
 export const RESIZE_STEP = 15
+export const DEFAULT_EVENT_MINUTES = 30
+
+export function snapMinutes(value, step = RESIZE_STEP) {
+  if (!Number.isFinite(value)) return GRID_START
+  return Math.round(value / step) * step
+}
+
+export function clampGridMinutes(value) {
+  return Math.min(GRID_END - RESIZE_STEP, Math.max(GRID_START, value))
+}
+
+export function rangeFromDrag(origin, current) {
+  const start = Math.min(origin, current)
+  const end = Math.max(origin, current) + SLOT_MINUTES
+  return {
+    start: clampGridMinutes(start),
+    end: Math.min(GRID_END, Math.max(start + SLOT_MINUTES, end)),
+  }
+}
 
 export function minutesOfTime(value) {
   if (!TIME_PATTERN.test(value || '')) return null
@@ -77,6 +96,26 @@ export function formatMinutesAsTime(total) {
   const hour = Math.floor(minutes / 60)
   const minute = minutes % 60
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+}
+
+/** 12-hour gutter/label like "11 PM" (hour 24 → "12 AM"). */
+export function formatHourClockLabel(hour24) {
+  const raw = Math.round(Number(hour24) || 0)
+  const hour = raw >= 24 ? 0 : ((raw % 24) + 24) % 24
+  const period = hour < 12 ? 'AM' : 'PM'
+  const twelve = hour % 12 === 0 ? 12 : hour % 12
+  return `${twelve} ${period}`
+}
+
+/** Display-only 12-hour clock from minute-of-day, e.g. "11:30 PM". */
+export function formatMinutesAsClock(total) {
+  const minutes = Math.max(0, Math.min(24 * 60, Math.round(Number(total) || 0)))
+  if (minutes >= 24 * 60) return '12:00 AM'
+  const hour24 = Math.floor(minutes / 60)
+  const minute = minutes % 60
+  const period = hour24 < 12 ? 'AM' : 'PM'
+  const twelve = hour24 % 12 === 0 ? 12 : hour24 % 12
+  return `${twelve}:${String(minute).padStart(2, '0')} ${period}`
 }
 
 export function slotMinutes() {

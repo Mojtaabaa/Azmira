@@ -16,11 +16,15 @@ function snapshot() {
   cachedTheme = theme
   cached = {
     theme,
-    text: readVar('--chart-text', '#f4f6fb'),
-    fill: readVar('--chart-fill', '#fdb827'),
-    grid: readVar('--chart-grid', '#2a3348'),
-    tipBg: readVar('--surface', '#0f1420'),
-    tipBorder: readVar('--line', '#2a3348'),
+    text: readVar('--text-muted', '#9a9890'),
+    fill: readVar('--accent', '#e8924a'),
+    grid: readVar('--border', '#2c2c29'),
+    tipBg: readVar('--surface', '#131312'),
+    tipBorder: readVar('--border', '#2c2c29'),
+    danger: readVar('--danger', '#e07171'),
+    warning: readVar('--warning', '#e0b35c'),
+    info: readVar('--info', '#6ea0d4'),
+    muted: readVar('--text-muted', '#9a9890'),
   }
   return cached
 }

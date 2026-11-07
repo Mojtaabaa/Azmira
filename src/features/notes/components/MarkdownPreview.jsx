@@ -23,6 +23,7 @@ export default function MarkdownPreview({ content, notes, onOpenWiki, onToggleTa
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath, remarkWikilinks]}
         rehypePlugins={[rehypeKatex]}
+        urlTransform={(url) => url || ''}
         components={{
           a({ href, children, ...props }) {
             if (href?.startsWith('wikilink:')) {

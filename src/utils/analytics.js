@@ -2,6 +2,8 @@ import { CAUSES } from '../data/causes'
 import { getSubjectById, listSubjects } from '../data/subjects'
 import { formatMinutes, isRealDateString } from './clock'
 import { konkoorPercentage } from './score'
+import { countTaskBuckets } from './tasks'
+import { subjectWeekProgress } from './subjectGoals'
 
 export const GRAINS = [
   { id: 'day', label: 'روز' },
@@ -14,7 +16,7 @@ const WEEKDAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه',
 const BUCKETS = [
   { id: 'dawn', label: 'بامداد', from: 0, to: 5 },
   { id: 'morning', label: 'صبح', from: 5, to: 12 },
-  { id: 'afternoon', label: 'ظهر', from: 12, to: 17 },
+  { id: 'afternoon', label: 'بعدازظهر', from: 12, to: 17 },
   { id: 'evening', label: 'عصر', from: 17, to: 21 },
   { id: 'night', label: 'شب', from: 21, to: 24 },
 ]
@@ -157,6 +159,7 @@ function filledKeys(start, today, grain, totals) {
 
 function studyBuckets(sessions, grain, today) {
   const totals = new Map()
+  const counts = new Map()
   const days = []
   sessions.forEach((session) => {
     const day = dayKeyFromValue(session.startTime)
@@ -164,6 +167,7 @@ function studyBuckets(sessions, grain, today) {
     days.push(day)
     const key = grain === 'month' ? day.slice(0, 7) : grain === 'week' ? weekStartKey(day) : day
     totals.set(key, (totals.get(key) || 0) + minutesOf(session))
+    counts.set(key, (counts.get(key) || 0) + 1)
   })
 
   const first = days.sort()[0] || ''
@@ -181,15 +185,24 @@ function studyBuckets(sessions, grain, today) {
       label: bucketLabel(key, grain),
       axis: grain === 'day' ? weekdayName(key) : bucketLabel(key, grain),
       hours: round1(minutes / 60),
+      sessions: counts.get(key) || 0,
     }
   })
 }
 
-function subjectShare(sessions) {
+function sharePeriod(grain, today) {
+  if (grain === 'day') return { start: today, end: today }
+  if (grain === 'week') return { start: weekStartKey(today), end: today }
+  return { start: `${today.slice(0, 7)}-01`, end: today }
+}
+
+function subjectShare(sessions, grain, today) {
+  const { start, end } = sharePeriod(grain || 'week', today)
   const totals = new Map()
   sessions.forEach((session) => {
     const subject = getSubjectById(session.subject)
-    if (!subject) return
+    const day = dayKeyFromValue(session.startTime)
+    if (!subject || !day || day < start || day > end) return
     totals.set(subject.id, (totals.get(subject.id) || 0) + minutesOf(session))
   })
 
@@ -214,6 +227,7 @@ function subjectShare(sessions) {
 
 function questionBuckets(tests, grain, today) {
   const totals = new Map()
+  const testTotals = new Map()
   const days = []
   tests.forEach((test) => {
     const day = dayKeyFromValue(test.date)
@@ -222,6 +236,7 @@ function questionBuckets(tests, grain, today) {
     days.push(day)
     const key = grain === 'month' ? day.slice(0, 7) : grain === 'week' ? weekStartKey(day) : day
     totals.set(key, (totals.get(key) || 0) + count)
+    testTotals.set(key, (testTotals.get(key) || 0) + 1)
   })
 
   const earliest = days.sort()[0] || ''
@@ -237,6 +252,7 @@ function questionBuckets(tests, grain, today) {
     label: bucketLabel(key, grain),
     axis: grain === 'day' ? weekdayName(key) : bucketLabel(key, grain),
     count: totals.get(key) || 0,
+    tests: testTotals.get(key) || 0,
   }))
 }
 
@@ -401,8 +417,8 @@ function bestStudyTime(sessions, tests) {
     : null
 
   const detail = average == null
-    ? `${formatMinutes(best.minutes)} مطالعه.`
-    : `${formatMinutes(best.minutes)} مطالعه. میانگین آزمون این روزها ${average.toFixed(1)}%.`
+    ? `${formatMinutes(best.minutes)} مطالعه کردی.`
+    : `${formatMinutes(best.minutes)} مطالعه کردی. میانگین آزمون این روزها ${average.toFixed(1)}٪.`
 
   return { label: best.label, detail }
 }
@@ -415,22 +431,135 @@ function recordedTests(tests, today) {
   return tests.filter((test) => upToToday(dayKeyFromValue(test.date), today))
 }
 
-export function buildAnalytics({ sessions, tests, mistakes, grain, questionGrain, today }) {
+function taskDoneDay(task) {
+  if (!task?.done) return ''
+  return dayKeyFromValue(task.completedAt) || dayKeyFromValue(task.createdAt) || ''
+}
+
+function taskSummary(tasks, today) {
+  const counts = countTaskBuckets(tasks, today)
+  const total = tasks.length
+  const done = counts.done
+  return {
+    ...counts,
+    total,
+    open: Math.max(0, total - done),
+    rate: total > 0 ? Math.round((done / total) * 100) : 0,
+  }
+}
+
+function taskCompletionBuckets(tasks, grain, today) {
+  const totals = new Map()
+  const days = []
+  tasks.forEach((task) => {
+    const day = taskDoneDay(task)
+    if (!upToToday(day, today)) return
+    days.push(day)
+    const key = grain === 'month' ? day.slice(0, 7) : grain === 'week' ? weekStartKey(day) : day
+    totals.set(key, (totals.get(key) || 0) + 1)
+  })
+
+  const first = days.sort()[0] || ''
+  const keys = grain === 'day'
+    ? currentWeekKeys(today)
+    : first
+      ? filledKeys(grain === 'week' ? weekStartKey(first) : first, today, grain, totals)
+      : grain === 'day'
+        ? currentWeekKeys(today)
+        : []
+  if (keys.length === 0 && grain === 'day') {
+    return currentWeekKeys(today).map((key) => ({
+      key,
+      label: bucketLabel(key, grain),
+      axis: weekdayName(key),
+      count: 0,
+    }))
+  }
+  if (keys.length === 0) return []
+
+  return keys.map((key) => ({
+    key,
+    label: bucketLabel(key, grain),
+    axis: grain === 'day' ? weekdayName(key) : bucketLabel(key, grain),
+    done: totals.get(key) || 0,
+  }))
+}
+
+function weekConsistency(sessions, today) {
+  const saturday = weekStartKey(today)
+  const days = new Set()
+  sessions.forEach((session) => {
+    const day = dayKeyFromValue(session.startTime)
+    if (!day || day < saturday || day > today) return
+    if (minutesOf(session) > 0) days.add(day)
+  })
+  const span = spanDays(saturday, today) + 1
+  return {
+    hit: days.size,
+    span,
+    rate: span > 0 ? Math.round((days.size / span) * 100) : 0,
+  }
+}
+
+function averageScore(tests) {
+  const scores = tests
+    .map((test) => konkoorPercentage(test.correct, test.wrong, test.totalQuestions))
+    .filter((score) => score != null)
+  if (scores.length === 0) return null
+  return round1(scores.reduce((sum, score) => sum + score, 0) / scores.length)
+}
+
+export function buildAnalytics({
+  sessions,
+  tests,
+  mistakes,
+  tasks = [],
+  goals = {},
+  grain,
+  questionGrain,
+  shareGrain,
+  taskGrain,
+  today,
+}) {
   const countGrain = questionGrain || grain
+  const subjectGrain = shareGrain || grain || 'week'
+  const doneGrain = taskGrain || grain || 'week'
   const visibleSessions = recordedSessions(sessions, today)
   const visibleTests = recordedTests(tests, today)
   const totalMinutes = visibleSessions.reduce((sum, session) => sum + minutesOf(session), 0)
+  const unreviewed = mistakes.filter((mistake) => !mistake.reviewed).length
+  const tasksInfo = taskSummary(tasks, today)
+  const consistency = weekConsistency(sessions, today)
+  const subjectGoals = subjectWeekProgress(sessions, goals, today)
+    .filter((row) => row.goal > 0)
+    .map((row) => ({
+      id: row.id,
+      label: row.name,
+      done: round1(row.done / 60),
+      goal: round1(row.goal / 60),
+      ratio: row.ratio == null ? 0 : Math.min(1.35, row.ratio),
+      percent: row.ratio == null ? 0 : Math.round(Math.min(135, row.ratio * 100)),
+      over: row.over,
+      low: row.low,
+    }))
+    .sort((a, b) => (a.ratio ?? 0) - (b.ratio ?? 0))
 
   return {
     hours: studyBuckets(visibleSessions, grain, today),
-    subjects: subjectShare(visibleSessions),
+    subjects: subjectShare(visibleSessions, subjectGrain, today),
     questions: questionBuckets(visibleTests, countGrain, today),
     questionSubjects: questionSubjects(visibleTests),
     scores: scoreSeries(visibleTests),
     topics: topicRows(visibleSessions, visibleTests),
     causes: causeCounts(mistakes, visibleTests),
+    tasks: taskCompletionBuckets(tasks, doneGrain, today),
+    taskSummary: tasksInfo,
+    subjectGoals,
+    consistency,
     streak: studyStreak(sessions, today),
     best: bestStudyTime(visibleSessions, visibleTests),
+    averageScore: averageScore(visibleTests),
+    unreviewedMistakes: unreviewed,
     totalMinutes,
     testCount: visibleTests.length,
     questionCount: visibleTests.reduce((sum, test) => sum + questionCountOf(test), 0),

@@ -1,8 +1,18 @@
 import SubjectField from '../SubjectField'
-import { getSubjectById } from '../../data/subjects'
+import TopicField from '../TopicField'
+import { formatHourCount, formatMinutes } from '../../utils/clock'
 
-export default function StudyTarget({ subject, topic, locked, onSubjectChange, onTopicChange }) {
-  const topics = getSubjectById(subject)?.topics || []
+export default function StudyTarget({
+  subject,
+  topic,
+  locked,
+  onSubjectChange,
+  onTopicChange,
+  weekDone = 0,
+  weekGoal = 0,
+}) {
+  const ratio = weekGoal > 0 ? Math.min(1.35, weekDone / weekGoal) : 0
+  const width = Math.round(Math.min(100, ratio * 100))
 
   return (
     <div className="study-target">
@@ -15,23 +25,39 @@ export default function StudyTarget({ subject, topic, locked, onSubjectChange, o
           onChange={onSubjectChange}
         />
       </h1>
-      <input
-        className="topic-input"
-        aria-label="مبحث"
+      <TopicField
+        variant="bare"
+        subject={subject}
         value={topic}
         disabled={locked}
-        dir="auto"
-        placeholder="مبحث"
-        maxLength={80}
-        autoComplete="off"
-        list="timer-topics"
-        onChange={(event) => onTopicChange(event.target.value)}
+        onChange={onTopicChange}
       />
-      <datalist id="timer-topics">
-        {topics.map((name) => (
-          <option key={name} value={name} />
-        ))}
-      </datalist>
+      {weekGoal > 0 ? (
+        <div className="study-week-goal">
+          <div className="study-week-goal-meta">
+            <span>هدف این هفته</span>
+            <strong>
+              {formatMinutes(weekDone)}
+              <span className="study-week-goal-sep">از</span>
+              {formatHourCount(weekGoal)} ساعت
+            </strong>
+          </div>
+          <div
+            className={[
+              'meter study-week-meter',
+              weekDone >= weekGoal ? 'is-over' : '',
+              weekDone > 0 && weekDone < weekGoal * 0.35 ? 'is-low' : '',
+            ].filter(Boolean).join(' ')}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={width}
+            aria-label="پیشرفت هدف هفتگی درس"
+          >
+            <span style={{ width: `${width}%` }} />
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

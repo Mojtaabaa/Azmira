@@ -28,7 +28,7 @@ export default function Explorer({ userId }) {
 
   async function handleNewNote(folderId = null) {
     const note = await createNote(userId, { folderId })
-    openNote(note.id)
+    if (note?.id) openNote(note.id)
   }
 
   return (

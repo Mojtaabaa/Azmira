@@ -1,4 +1,5 @@
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { SUBJECT_COLORS, getSubjectById } from '../../data/subjects'
 import { useChartTheme } from '../../hooks/useChartTheme'
 import ChartTip from './ChartTip'
 
@@ -17,7 +18,14 @@ export default function SubjectShareChart({ rows }) {
           <XAxis type="number" tick={{ fill: theme.text, fontSize: 12, fillOpacity: 0.65 }} axisLine={false} tickLine={false} />
           <YAxis type="category" dataKey="label" width={72} tick={{ fill: theme.text, fontSize: 13 }} axisLine={false} tickLine={false} />
           <Tooltip content={<ChartTip />} cursor={{ fill: 'var(--accent-soft)' }} />
-          <Bar dataKey="hours" name="ساعت" fill={theme.fill} radius={4} maxBarSize={22} />
+          <Bar dataKey="hours" name="ساعت" radius={4} maxBarSize={22}>
+            {rows.map((row) => (
+              <Cell
+                key={row.id || row.label}
+                fill={getSubjectById(row.id)?.color || SUBJECT_COLORS.default}
+              />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

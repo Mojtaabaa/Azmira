@@ -1,0 +1,38 @@
+.progress-widget {
+  display: grid;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+}
+
+.progress-widget-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.progress-widget strong {
+  display: block;
+}
+
+.progress-widget span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.progress-widget-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+  overflow: hidden;
+}
+
+.progress-widget-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent, #0f766e);
+}

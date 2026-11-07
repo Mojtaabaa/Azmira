@@ -1,46 +1,73 @@
 import { useState } from 'react'
-import { coverageOf, nextTopicStatus, topicStatusLabel, topicsBySubject } from '../../utils/topics'
+import { coverageOf, nextTopicStatus, topicStatusLabel } from '../../utils/topics'
 
-export default function TopicBoard({ topics, onStatus, onDelete }) {
+export default function TopicBoard({ groups, onStatus, onDelete }) {
   const [confirming, setConfirming] = useState('')
-  const groups = topicsBySubject(topics)
 
-  if (groups.length === 0) {
-    return <p className="card-copy">هنوز مبحثی در فهرست نیست.</p>
+  if (!groups.length) {
+    return <p className="card-copy">هنوز مبحثی ثبت نشده.</p>
   }
 
   return (
     <div className="topic-groups">
       {groups.map((group) => {
-        const coverage = coverageOf(group.topics)
+        const savedTopics = group.topics.filter((topic) => topic.saved)
+        const coverage = coverageOf(savedTopics.map((topic) => ({ status: topic.status })))
         return (
           <section key={group.subject.id} className="card">
             <div className="goal-figures">
               <h2>{group.subject.name}</h2>
-              <strong dir="ltr">{coverage}%</strong>
+              {savedTopics.length > 0 ? <strong dir="ltr">{coverage}%</strong> : null}
             </div>
-            <div className="meter" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={coverage} aria-label={group.subject.name}>
-              <span style={{ width: `${coverage}%` }} />
-            </div>
+            {savedTopics.length > 0 ? (
+              <div
+                className="meter"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={coverage}
+                aria-label={group.subject.name}
+              >
+                <span style={{ width: `${coverage}%` }} />
+              </div>
+            ) : (
+              <p className="card-copy">این نام‌ها از جلسه‌ها آمده‌اند؛ می‌توانی حذفشان کنی تا در پیشنهادها نیایند.</p>
+            )}
             <ul className="topic-list">
               {group.topics.map((topic) => (
-                <li key={topic.id}>
-                  <span>{topic.name}</span>
+                <li key={topic.key}>
+                  <span className="topic-name">
+                    {topic.name}
+                    {!topic.saved ? <em className="topic-tag">از جلسه‌ها</em> : null}
+                  </span>
                   <span className="topic-actions">
-                    <button
-                      type="button"
-                      className={topic.status === 'done' ? 'button button-primary' : 'button'}
-                      aria-label={`وضعیت ${topic.name}`}
-                      onClick={() => onStatus(topic, nextTopicStatus(topic.status))}
-                    >
-                      {topicStatusLabel(topic.status)}
-                    </button>
-                    {confirming === topic.id ? (
-                      <button type="button" className="button button-danger is-solid" onClick={() => onDelete(topic.id)}>
+                    {topic.saved ? (
+                      <button
+                        type="button"
+                        className={topic.status === 'done' ? 'button button-primary' : 'button'}
+                        aria-label={`وضعیت ${topic.name}`}
+                        onClick={() => onStatus(topic, nextTopicStatus(topic.status))}
+                      >
+                        {topicStatusLabel(topic.status)}
+                      </button>
+                    ) : null}
+                    {confirming === topic.key ? (
+                      <button
+                        type="button"
+                        className="button button-danger is-solid"
+                        onClick={() => {
+                          onDelete(topic)
+                          setConfirming('')
+                        }}
+                      >
                         تایید حذف
                       </button>
                     ) : (
-                      <button type="button" className="button button-danger" onClick={() => setConfirming(topic.id)}>
+                      <button
+                        type="button"
+                        className="button button-danger"
+                        onClick={() => setConfirming(topic.key)}
+                      >
                         حذف
                       </button>
                     )}

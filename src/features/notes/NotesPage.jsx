@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { FileText, FolderTree, Network, PanelRight } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import CommandPalette from './components/CommandPalette'
@@ -14,6 +15,7 @@ import StatusBar from './components/StatusBar'
 import TrashPanel from './components/TrashPanel'
 import GraphControls from './graph/GraphControls'
 import GraphView from './graph/GraphView'
+import { collectImageFiles } from './lib/insertImage'
 import { importMarkdownFiles } from './lib/importVault'
 import { useNotesStore } from './store/notesStore'
 import { useGraphSettingsStore } from './store/graphSettingsStore'
@@ -52,6 +54,8 @@ export default function NotesPage() {
   const importVaultData = useNotesStore((state) => state.importVaultData)
   const persistUiSettings = useNotesStore((state) => state.persistUiSettings)
   const hydrateUi = useNotesUiStore((state) => state.hydrateUi)
+  const setReady = useNotesUiStore((state) => state.setReady)
+  const ready = useNotesUiStore((state) => state.ready)
   const setUserId = useNotesUiStore((state) => state.setUserId)
   const activeNoteId = useNotesUiStore((state) => state.activeNoteId)
   const openTabs = useNotesUiStore((state) => state.openTabs)
@@ -76,29 +80,47 @@ export default function NotesPage() {
   const openNote = useNotesUiStore((state) => state.openNote)
   const hydrateGraph = useGraphSettingsStore((state) => state.hydrate)
   const dropArmed = useRef(false)
+  const deepLinkDone = useRef('')
+  const [params, setParams] = useSearchParams()
+  const searchKey = params.toString()
 
   const note = useMemo(() => getNoteById(activeNoteId), [getNoteById, activeNoteId])
 
   useEffect(() => {
     let alive = true
+    const ui = useNotesUiStore.getState()
+    const keepUi = ui.ready && ui.userId === userId
+    if (!keepUi) setReady(false)
     ;(async () => {
       setUserId(userId)
-      const settings = await hydrate(userId)
-      if (!alive) return
-      hydrateUi({
-        openTabs: Array.isArray(settings.openTabs) ? settings.openTabs : [],
-        activeNoteId: settings.activeNoteId || null,
-        viewMode: settings.viewMode || 'edit',
-        sortBy: settings.sortBy || 'modified',
-        collapsedFolders: settings.collapsedFolders || {},
-        rightTab: settings.rightTab || 'backlinks',
-      })
-      if (settings.graph) hydrateGraph(settings.graph)
+      try {
+        const settings = await hydrate(userId)
+        if (!alive) return
+        if (settings.graph) hydrateGraph(settings.graph)
+        if (keepUi) {
+          setReady(true)
+          return
+        }
+        const known = new Set(useNotesStore.getState().notes.map((item) => item.id))
+        const tabs = (Array.isArray(settings.openTabs) ? settings.openTabs : []).filter((id) => known.has(id))
+        const active = known.has(settings.activeNoteId) ? settings.activeNoteId : (tabs[tabs.length - 1] || null)
+        hydrateUi({
+          openTabs: tabs,
+          activeNoteId: active,
+          viewMode: settings.viewMode || 'edit',
+          sortBy: settings.sortBy || 'modified',
+          collapsedFolders: settings.collapsedFolders || {},
+          rightTab: settings.rightTab || 'backlinks',
+        })
+      } catch (error) {
+        console.error(error)
+        if (alive) setReady(true)
+      }
     })()
     return () => {
       alive = false
     }
-  }, [userId, hydrate, hydrateUi, setUserId, hydrateGraph])
+  }, [userId, hydrate, hydrateUi, setUserId, hydrateGraph, setReady])
 
   useEffect(() => {
     if (!loaded) return
@@ -125,6 +147,35 @@ export default function NotesPage() {
     rightTab,
     persistUiSettings,
   ])
+
+  useEffect(() => {
+    if (!loaded || !ready) return
+    const id = params.get('n')
+    const daily = params.get('daily')
+    if (!id && !daily) return
+    const key = searchKey
+    if (deepLinkDone.current === key) return
+    deepLinkDone.current = key
+    if (id) openNote(id)
+    if (daily) {
+      const title = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date())
+      const existing = useNotesStore.getState().getNoteByTitle(title)
+      if (existing) openNote(existing.id)
+      else {
+        useNotesStore.getState().createNote(userId, { title, content: `# ${title}\n\n` }).then((created) => {
+          openNote(created.id)
+        })
+      }
+    }
+    const next = new URLSearchParams(searchKey)
+    next.delete('n')
+    next.delete('daily')
+    setParams(next, { replace: true })
+  }, [loaded, ready, searchKey, params, setParams, openNote, userId])
 
   async function openDaily() {
     const title = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
@@ -186,7 +237,7 @@ export default function NotesPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [cycleViewMode, setSearchOpen, setCommandOpen, setSwitcherOpen, setHelpOpen, userId])
 
-  if (!loaded) {
+  if (!loaded || !ready) {
     return (
       <div className="notes-shell notes-loading" role="status">
         در حال بارگذاری یادداشت‌ها…
@@ -205,8 +256,12 @@ export default function NotesPage() {
         event.preventDefault()
         if (!dropArmed.current) return
         dropArmed.current = false
-        const files = event.dataTransfer?.files
-        if (!files?.length) return
+        if (event.target.closest('.notes-source')) return
+        const files = [...(event.dataTransfer?.files || [])]
+        if (collectImageFiles(event.dataTransfer).length && !files.some((file) => /\.(md|zip)$/i.test(file.name))) {
+          return
+        }
+        if (!files.length) return
         const payload = await importMarkdownFiles(files)
         await importVaultData(userId, payload)
       }}
@@ -253,11 +308,22 @@ export default function NotesPage() {
       {helpOpen ? <HelpModal /> : null}
       {trashOpen ? <TrashPanel /> : null}
       {graphOpen ? (
-        <div className="notes-graph-overlay">
-          <GraphControls onAnimate={() => useGraphSettingsStore.getState().reheat()} />
-          <GraphView onClose={() => setGraphOpen(false)} />
-        </div>
+        <GraphOverlay onClose={() => setGraphOpen(false)} />
       ) : null}
+    </div>
+  )
+}
+
+function GraphOverlay({ onClose }) {
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  return (
+    <div className={`notes-graph-overlay${filtersOpen ? ' is-filters' : ''}`}>
+      <GraphControls onAnimate={() => useGraphSettingsStore.getState().reheat()} />
+      <GraphView
+        onClose={onClose}
+        onToggleFilters={() => setFiltersOpen((open) => !open)}
+        filtersOpen={filtersOpen}
+      />
     </div>
   )
 }

@@ -17,4 +17,7 @@ export const DEFAULT_SETTINGS = {
   customSubjects: [],
   hiddenSubjects: [],
   subjectWeights: {},
+  subjectWeeklyGoals: {},
+  hiddenTopics: [],
+  syncSessionsToPlanner: true,
 }

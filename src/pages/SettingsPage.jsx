@@ -21,7 +21,7 @@ export default function SettingsPage() {
     <section className="page">
       <header className="page-header">
         <h1>تنظیمات</h1>
-        <p>ظاهر، زمان‌سنج، هدف‌ها، تاریخ کنکور، نام درس‌ها، ورود از مرورگر، پشتیبان و حذف داده‌ها.</p>
+        <p>ظاهر، زمان‌سنج، هدف روزانه و هفتگی و هدف هر درس، تاریخ کنکور، نام درس‌ها، وارد کردن از مرورگر، پشتیبان‌گیری و حذف داده‌ها.</p>
       </header>
       <div className="stack">
         <ThemeSettings />

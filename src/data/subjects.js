@@ -1,34 +1,43 @@
 import { getSettings } from '../utils/storage'
 
+export const SUBJECT_COLORS = {
+  math: '#4f6fb8',
+  physics: '#2f8f9a',
+  chemistry: '#3d8f66',
+  geometry: '#c45c26',
+  literature: '#b05a7a',
+  default: '#c45c26',
+}
+
 export const SUBJECTS = [
   {
     id: 'math',
     name: 'ریاضی',
-    color: '#1a3a6d',
+    color: SUBJECT_COLORS.math,
     topics: [],
   },
   {
     id: 'physics',
     name: 'فیزیک',
-    color: '#fdb827',
+    color: SUBJECT_COLORS.physics,
     topics: [],
   },
   {
     id: 'chemistry',
     name: 'شیمی',
-    color: '#3d7ea6',
+    color: SUBJECT_COLORS.chemistry,
     topics: [],
   },
   {
     id: 'geometry',
     name: 'هندسه',
-    color: '#c4782a',
+    color: SUBJECT_COLORS.geometry,
     topics: [],
   },
   {
     id: 'literature',
     name: 'ادبیات',
-    color: '#5b6b8c',
+    color: SUBJECT_COLORS.literature,
     topics: [],
   },
 ]
@@ -55,7 +64,7 @@ export function listSubjects({ includeHidden = false } = {}) {
   const custom = customList().map((subject) => ({
     id: subject.id,
     name: subject.name,
-    color: subject.color || '#1a3a6d',
+    color: subject.color || SUBJECT_COLORS.default,
     topics: [],
     custom: true,
     hidden: false,
@@ -78,7 +87,7 @@ export function getSubjectById(subjectId) {
   return {
     id: custom.id,
     name: custom.name,
-    color: custom.color || '#1a3a6d',
+    color: custom.color || SUBJECT_COLORS.default,
     topics: [],
     custom: true,
     hidden: false,

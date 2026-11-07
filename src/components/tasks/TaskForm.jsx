@@ -7,7 +7,7 @@ export default function TaskForm({ value, editing, error, onChange, onSubmit, on
       {editing ? <p className="todo-composer-note">ویرایش کار</p> : null}
       <input
         className="todo-name"
-        dir="auto"
+        dir={value.title.trim() ? 'auto' : 'rtl'}
         value={value.title}
         maxLength={160}
         autoComplete="off"

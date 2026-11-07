@@ -70,8 +70,10 @@ export function renameCustomSubject(id, raw) {
 export function removeCustomSubject(id) {
   const next = (getSettings().customSubjects || []).filter((subject) => subject.id !== id)
   const weights = { ...(getSettings().subjectWeights || {}) }
+  const goals = { ...(getSettings().subjectWeeklyGoals || {}) }
   delete weights[id]
-  updateSettings({ customSubjects: next, subjectWeights: weights })
+  delete goals[id]
+  updateSettings({ customSubjects: next, subjectWeights: weights, subjectWeeklyGoals: goals })
 }
 
 export function hideBuiltinSubject(id) {
@@ -80,8 +82,10 @@ export function hideBuiltinSubject(id) {
   const hidden = new Set(getSettings().hiddenSubjects || [])
   hidden.add(id)
   const weights = { ...(getSettings().subjectWeights || {}) }
+  const goals = { ...(getSettings().subjectWeeklyGoals || {}) }
   delete weights[id]
-  updateSettings({ hiddenSubjects: [...hidden], subjectWeights: weights })
+  delete goals[id]
+  updateSettings({ hiddenSubjects: [...hidden], subjectWeights: weights, subjectWeeklyGoals: goals })
   return { ok: true }
 }
 

@@ -1,0 +1,84 @@
+.mini-timer {
+  position: fixed;
+  left: 18px;
+  bottom: 22px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 36px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-solid) 70%, transparent);
+  padding: 6px 6px 6px 16px;
+  box-shadow: var(--shadow-lift);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  animation: sheet-up 360ms var(--ease-out) both;
+  transition: border-color 220ms var(--ease-out), background-color 220ms var(--ease-out), transform 220ms var(--ease-out);
+}
+
+.mini-timer:hover {
+  transform: translateY(-2px);
+}
+
+.mini-timer.is-running {
+  border-color: var(--border-accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-solid));
+  box-shadow:
+    var(--shadow-lift),
+    0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.mini-timer-toggle {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  padding: 0;
+}
+
+.mini-timer-toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.mini-timer-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  color: var(--text);
+  text-decoration: none;
+  line-height: 1.25;
+}
+
+.mini-timer-clock {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-timer-label {
+  max-width: 130px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 760px) {
+  .mini-timer {
+    left: 12px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+}

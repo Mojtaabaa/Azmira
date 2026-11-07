@@ -23,7 +23,7 @@
 .exam-nav a.is-active {
   color: var(--text);
   background: var(--accent-soft);
-  border-color: transparent;
+  border-color: var(--border-accent);
 }
 
 .test-count-card {
@@ -70,7 +70,7 @@
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--bg);
+  background: var(--surface-2);
   color: var(--text);
   padding: 10px 12px;
 }
@@ -212,9 +212,9 @@
 }
 
 .mark-button.is-wrong {
-  background: #e23d3d;
-  border-color: #e23d3d;
-  color: #fff;
+  background: var(--danger);
+  border-color: transparent;
+  color: var(--on-accent);
   font-weight: 700;
 }
 
@@ -230,7 +230,7 @@
 }
 
 .test-list > li.is-editing {
-  outline: 1px solid var(--accent);
+  outline: 1px solid var(--border-accent);
   border-radius: 12px;
 }
 
@@ -276,7 +276,7 @@
 }
 
 .test-list > li.is-active {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--accent-soft);
   margin: 0 -10px;
   padding: 12px 10px;
   border-radius: 12px;
@@ -302,13 +302,18 @@
   gap: 12px;
   align-items: flex-start;
   padding: 12px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--surface-2);
+  background: var(--surface);
 }
 
 .mistake-card.is-open {
-  border-color: #fff;
+  border-color: var(--border-accent);
+  background: color-mix(in srgb, var(--accent-soft) 70%, var(--surface));
+}
+
+.mistake-card .button-row {
+  margin-top: 0;
 }
 
 .mistake-card p {

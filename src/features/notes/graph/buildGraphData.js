@@ -1,4 +1,11 @@
+import { SUBJECT_COLORS } from '../../../data/subjects'
 import { extractTags } from '../lib/parseTags'
+
+function readCssColor(name, fallback) {
+  if (typeof document === 'undefined') return fallback
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return value || fallback
+}
 
 export function buildGraphData(notes, {
   search = '',
@@ -14,31 +21,31 @@ export function buildGraphData(notes, {
   const byTitle = new Map(notes.map((note) => [note.title.trim().toLowerCase(), note]))
   const allowed = new Set()
 
-  if (focusId && depth != null) {
+  if (depth != null) {
+    if (!focusId) return { nodes: [], links: [] }
     const start = notes.find((note) => note.id === focusId)
-    if (start) {
-      const queue = [{ id: start.id, d: 0 }]
-      const seen = new Set([start.id])
-      while (queue.length) {
-        const current = queue.shift()
-        allowed.add(current.id)
-        if (current.d >= depth) continue
-        const note = notes.find((item) => item.id === current.id)
-        if (!note) continue
-        for (const title of note.outgoingLinks || []) {
-          const target = byTitle.get(title.trim().toLowerCase())
-          if (target && !seen.has(target.id)) {
-            seen.add(target.id)
-            queue.push({ id: target.id, d: current.d + 1 })
-          }
+    if (!start) return { nodes: [], links: [] }
+    const queue = [{ id: start.id, d: 0 }]
+    const seen = new Set([start.id])
+    while (queue.length) {
+      const current = queue.shift()
+      allowed.add(current.id)
+      if (current.d >= depth) continue
+      const note = notes.find((item) => item.id === current.id)
+      if (!note) continue
+      for (const title of note.outgoingLinks || []) {
+        const target = byTitle.get(title.trim().toLowerCase())
+        if (target && !seen.has(target.id)) {
+          seen.add(target.id)
+          queue.push({ id: target.id, d: current.d + 1 })
         }
-        const selfTitle = note.title.trim().toLowerCase()
-        for (const other of notes) {
-          const hits = (other.outgoingLinks || []).some((link) => link.trim().toLowerCase() === selfTitle)
-          if (hits && !seen.has(other.id)) {
-            seen.add(other.id)
-            queue.push({ id: other.id, d: current.d + 1 })
-          }
+      }
+      const selfTitle = note.title.trim().toLowerCase()
+      for (const other of notes) {
+        const hits = (other.outgoingLinks || []).some((link) => link.trim().toLowerCase() === selfTitle)
+        if (hits && !seen.has(other.id)) {
+          seen.add(other.id)
+          queue.push({ id: other.id, d: current.d + 1 })
         }
       }
     }
@@ -128,10 +135,10 @@ export function buildGraphData(notes, {
 }
 
 function colorFor(node, groups) {
-  if (node.unresolved) return '#8b95a8'
+  if (node.unresolved) return readCssColor('--text-muted', SUBJECT_COLORS.default)
   for (const group of groups) {
     const match = /tag:#?(.+)/i.exec(group.query || '')
     if (match && node.tags.includes(match[1])) return group.color
   }
-  return '#6ba3d6'
+  return SUBJECT_COLORS.default
 }

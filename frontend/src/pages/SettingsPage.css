@@ -1,0 +1,137 @@
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 0 4px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.check-row input {
+  margin-top: 3px;
+}
+
+.card-subheading {
+  margin: 22px 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.subject-weekly-goals-embed {
+  margin-top: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+
+.subject-weekly-goals-embed .card-copy {
+  margin-top: 6px;
+}
+
+.length-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.length-form label {
+  display: grid;
+  grid-template-columns: 1fr 88px auto;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.date-field label {
+  grid-template-columns: auto minmax(0, 220px);
+}
+
+.length-form input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.subject-names,
+.subject-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.subject-list {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.subject-names label {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.subject-add,
+.subject-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.subject-names input,
+.subject-row input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 10px 12px;
+}
+
+.subject-row input {
+  flex: 1;
+}
+
+.subject-row-name {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 42px;
+  color: var(--text);
+  font-size: 1rem;
+  padding: 10px 2px;
+}
+
+.subject-row-name small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.subject-hidden {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 760px) {
+  .subject-add,
+  .subject-row {
+    flex-wrap: wrap;
+  }
+
+  .subject-add .button,
+  .subject-row .button {
+    width: 100%;
+  }
+}

@@ -28,7 +28,7 @@
 
 .jalali-toggle.is-on {
   background: var(--chip-on);
-  border-color: var(--accent);
+  border-color: var(--border-accent);
   color: var(--chip-on-text);
   font-weight: 700;
 }
@@ -108,7 +108,7 @@
 
 .upcoming-strip button.is-next {
   background: var(--chip-on);
-  border-color: var(--accent);
+  border-color: var(--border-accent);
   color: var(--chip-on-text);
 }
 
@@ -131,7 +131,7 @@
 
 .cal-row {
   display: grid;
-  grid-template-columns: 48px repeat(7, minmax(112px, 1fr));
+  grid-template-columns: 58px repeat(7, minmax(112px, 1fr));
 }
 
 .cal-head {
@@ -222,10 +222,16 @@
   border: 0;
   border-top: 1px solid transparent;
   background: transparent;
+  cursor: crosshair;
+  touch-action: none;
 }
 
 .cal-slot.is-hour {
   border-top-color: var(--line);
+}
+
+.cal-slot.is-half {
+  border-top-color: color-mix(in srgb, var(--line) 55%, transparent);
 }
 
 .cal-slot:hover,
@@ -234,10 +240,52 @@
   background: var(--hover);
 }
 
+.cal-scroll.is-selecting {
+  user-select: none;
+  cursor: crosshair;
+}
+
+.cal-scroll.is-selecting .cal-slot:hover,
+.cal-scroll.is-selecting .cal-allday-cell:hover,
+.cal-scroll.is-selecting .cal-day:hover {
+  background: transparent;
+}
+
 .cal-slot.is-target,
 .cal-allday-cell.is-target,
 .cal-day.is-target {
   background: var(--hover-strong);
+}
+
+.cal-slot.is-selecting {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.cal-select {
+  position: absolute;
+  inset-inline: 3px;
+  z-index: 3;
+  border-radius: 8px;
+  border: 1px solid var(--border-accent);
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface));
+  color: var(--text);
+  padding: 3px 6px;
+  pointer-events: none;
+  box-shadow: var(--shadow);
+}
+
+.cal-select strong,
+.cal-select span {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.78rem;
+}
+
+.cal-select span {
+  color: var(--muted);
+  direction: ltr;
 }
 
 .cal-now {
@@ -444,7 +492,7 @@
   max-height: min(78vh, 640px);
   overflow: auto;
   background: var(--surface);
-  border-color: var(--accent);
+  border-color: var(--border-accent);
 }
 
 .event-form {

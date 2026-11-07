@@ -1,0 +1,154 @@
+.learn-page {
+  display: grid;
+  gap: 18px;
+  padding-block: 8px 28px;
+}
+
+.learn-hero h1 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2vw, 1.9rem);
+}
+
+.learn-kicker {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.learn-sub,
+.muted,
+.learn-note {
+  color: var(--muted);
+}
+
+.learn-error {
+  color: #b91c1c;
+}
+
+.learn-ok {
+  color: #047857;
+}
+
+.learn-panel {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--surface, #fff) 90%, #0d9488 10%);
+}
+
+.learn-panel h2 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+}
+
+.learn-row,
+.learn-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.learn-row.wrap {
+  align-items: flex-start;
+}
+
+.learn-row input,
+.learn-row select,
+.learn-panel textarea,
+.learn-actions button,
+.learn-row button,
+.learn-list button {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--surface, #fff);
+  color: var(--text);
+}
+
+.learn-row input {
+  min-width: 120px;
+  flex: 1;
+}
+
+.learn-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.learn-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface, #fff) 82%, transparent);
+}
+
+.learn-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-end: 10px;
+}
+
+.question-block {
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.question-block textarea {
+  width: 100%;
+  min-height: 72px;
+}
+
+.mastery-pill {
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  background: color-mix(in srgb, #0d9488 20%, transparent);
+}
+
+.level-NeedsReview {
+  background: color-mix(in srgb, #b45309 22%, transparent);
+}
+
+.level-Mastered,
+.level-Proficient {
+  background: color-mix(in srgb, #047857 22%, transparent);
+}
+
+.facts-box {
+  background: color-mix(in srgb, var(--surface, #fff) 70%, #0f172a 8%);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  overflow: auto;
+  font-size: 0.8rem;
+}
+
+.narrative {
+  line-height: 1.7;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .learn-panel {
+    animation: learn-in 220ms ease-out;
+  }
+}
+
+@keyframes learn-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

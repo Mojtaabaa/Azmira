@@ -28,9 +28,9 @@ export default function TodayLists({ tasks, events, overdue }) {
         <Link className="text-link" to="/tasks">همه کارها</Link>
       </section>
       <section className="card">
-        <h2>رویدادهای امروز</h2>
+        <h2>برنامهٔ امروز</h2>
         {events.length === 0 ? (
-          <p className="card-copy">برای امروز رویدادی نیست.</p>
+          <p className="card-copy">برای امروز برنامه‌ای نیست.</p>
         ) : (
           <ul className="plain-list">
             {events.map((event) => (

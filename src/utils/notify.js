@@ -48,9 +48,9 @@ export function notifyPhaseEnd(finishedPhase, nextPhase) {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
 
   const title = finishedPhase === 'focus' ? 'تمرکز تمام شد' : 'استراحت تمام شد'
-  let body = 'وقت تمرکز دوباره است.'
-  if (nextPhase === 'shortBreak') body = 'وقت استراحت کوتاه است.'
-  if (nextPhase === 'longBreak') body = 'وقت استراحت بلند است.'
+  let body = 'وقتشه دوباره تمرکز کنی.'
+  if (nextPhase === 'shortBreak') body = 'وقتشه یک استراحت کوتاه بکنی.'
+  if (nextPhase === 'longBreak') body = 'وقتشه یک استراحت طولانی بکنی.'
 
   try {
     new Notification(title, { body })

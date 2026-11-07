@@ -25,7 +25,7 @@ export default function BrowserImport() {
   if (!legacy) {
     return (
       <section className="card">
-        <h2>ورود از مرورگر</h2>
+        <h2>وارد کردن از مرورگر</h2>
         <p className="card-copy">
           اگر قبلاً بدون حساب در همین مرورگر کار کرده باشی، داده‌هایش اینجا پیدا می‌شود. الان چیزی پیدا نشد.
         </p>
@@ -65,7 +65,7 @@ export default function BrowserImport() {
 
   return (
     <section className="card">
-      <h2>ورود از مرورگر</h2>
+      <h2>وارد کردن از مرورگر</h2>
       <p className="card-copy">
         این داده‌ها هنوز در مرورگر هست: {summary}.
         {accountHasData

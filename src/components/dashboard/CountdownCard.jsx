@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { formatGregorian, formatJalali } from '../../utils/week'
+import { formatJalali } from '../../utils/week'
 
 export default function CountdownCard({ countdown }) {
   const { days, started } = countdown
@@ -22,11 +22,9 @@ export default function CountdownCard({ countdown }) {
       <p className="countdown-figure" dir="ltr">{headline}</p>
       <p>{caption}</p>
       <p className="card-copy">
-        {formatGregorian(countdown.day, true)}
-        {' · '}
         {formatJalali(countdown.day, true)}
         {' · '}
-        <span dir="ltr">08:00</span>
+        <span dir="ltr">۸ صبح</span>
       </p>
       <Link className="text-link" to="/settings#konkoor-date">تغییر تاریخ</Link>
     </section>

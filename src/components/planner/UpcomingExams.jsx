@@ -1,7 +1,7 @@
 import { getSubjectById } from '../../data/subjects'
-import { formatGregorian, formatJalali } from '../../utils/week'
+import { formatJalali } from '../../utils/week'
 
-export default function UpcomingExams({ exams, today, showJalali, onEdit }) {
+export default function UpcomingExams({ exams, today, onEdit }) {
   if (exams.length === 0) return null
 
   return (
@@ -24,8 +24,7 @@ export default function UpcomingExams({ exams, today, showJalali, onEdit }) {
                 <span>
                   {subject ? `${subject.name} · ` : ''}
                   {exam.date === today ? 'امروز · ' : ''}
-                  {formatGregorian(exam.date)}
-                  {showJalali ? ` · ${formatJalali(exam.date)}` : ''}
+                  {formatJalali(exam.date)}
                   {exam.startTime ? (
                     <span className="plan-time" dir="ltr">{` · ${exam.startTime}`}</span>
                   ) : null}

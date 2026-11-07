@@ -1,0 +1,280 @@
+.analytics-stack .card {
+  scroll-margin-top: 72px;
+}
+
+.analytics-jump {
+  position: sticky;
+  top: 8px;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+  overflow: auto;
+  margin: 0 0 12px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-solid) 88%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.analytics-jump a,
+.kpi-grid a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.analytics-jump a {
+  flex: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+.analytics-jump a:hover,
+.kpi-grid a:hover {
+  background: var(--hover);
+}
+
+.kpi-grid {
+  margin-top: 0;
+}
+
+.kpi-grid li {
+  padding: 0;
+  overflow: hidden;
+}
+
+.kpi-grid a {
+  display: block;
+  height: 100%;
+  padding: 12px 14px;
+}
+
+.kpi-grid strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-note {
+  margin: 10px 2px 0;
+  color: var(--text-muted);
+}
+
+.kpi-note a {
+  color: var(--link);
+}
+
+@media (max-width: 760px) {
+  .analytics-jump {
+    top: 64px;
+  }
+}
+
+.analytics-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.analytics-filters button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 8px 12px;
+}
+
+.analytics-filters button.is-active {
+  background: var(--chip-on);
+  border-color: var(--chip-on);
+  color: var(--chip-on-text);
+  font-weight: 700;
+}
+
+.analytics-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.analytics-head h2 {
+  margin-bottom: 0;
+}
+
+.analytics-head-copy {
+  margin: 6px 0 0;
+}
+
+.goal-bars {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.goal-bars-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.goal-bars-meta span {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-bars .meter {
+  height: 8px;
+}
+
+.goal-bars li.is-low .meter span {
+  background: var(--info);
+}
+
+.goal-bars li.is-over .meter span {
+  background: var(--warning);
+}
+
+.task-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.task-summary li {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-solid) 50%, transparent);
+  padding: 8px 12px;
+  min-width: 88px;
+}
+
+.task-summary span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.task-summary strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+
+.chart-box {
+  width: 100%;
+  height: 280px;
+  min-width: 0;
+  direction: ltr;
+}
+
+.chart-box text {
+  font-family: Vazirmatn, Tahoma, sans-serif;
+}
+
+.chart-box-tall {
+  height: 320px;
+}
+
+.chart-tip {
+  background: color-mix(in srgb, var(--surface-solid) 82%, transparent);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.chart-tip p {
+  margin: 2px 0 0;
+}
+
+.chart-box .recharts-legend-item-text {
+  color: var(--text) !important;
+}
+
+.topic-table-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.topic-table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+}
+
+.topic-table th,
+.topic-table td {
+  text-align: start;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.topic-table th {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.topic-table .num {
+  direction: ltr;
+  text-align: end;
+  unicode-bidi: isolate;
+}
+
+.topic-table tr.is-weak td {
+  background: var(--accent-soft);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.stat-grid p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.count-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+}
+
+.count-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.count-list strong {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+@media (max-width: 760px) {
+  .chart-box {
+    height: 240px;
+  }
+
+  .chart-box-tall {
+    height: 280px;
+  }
+}

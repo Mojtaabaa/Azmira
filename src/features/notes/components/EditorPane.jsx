@@ -1,18 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
-import { EditorSelection } from '@codemirror/state'
 import { buildEditorExtensions } from '../lib/editorExtensions'
 import {
   insertAtCursor,
-  insertAtCursorInDoc,
   insertSnippet,
-  insertSnippetInDoc,
   toggleLinePrefix,
-  toggleLinePrefixInDoc,
-  wrapRangeInDoc,
   wrapSelection,
 } from '../lib/editorFormat'
-import { storeAndInsertImage } from '../lib/insertImage'
+import { collectImageFiles, isImageFile, storeAndInsertImage } from '../lib/insertImage'
 import { useNotesStore } from '../store/notesStore'
 import { useNotesUiStore } from '../store/uiStore'
 import EditorMetaBar from './EditorMetaBar'
@@ -41,8 +36,6 @@ function NoteEditor({ userId, note }) {
   const setSaveState = useNotesUiStore((state) => state.setSaveState)
   const timer = useRef(null)
   const viewRef = useRef(null)
-  const selectionRef = useRef({ from: 0, to: 0 })
-  const pendingSelectionRef = useRef(null)
   const imageInputRef = useRef(null)
   const [titleDraft, setTitleDraft] = useState(note.title || '')
   const [contentDraft, setContentDraft] = useState(note.content || '')
@@ -69,68 +62,40 @@ function NoteEditor({ userId, note }) {
     }, 400)
   }, [note.id, updateNote, userId, setSaveState])
 
-  const handleEditorUpdate = useCallback((vu) => {
-    if (vu.selectionSet || vu.docChanged) {
-      selectionRef.current = {
-        from: vu.state.selection.main.from,
-        to: vu.state.selection.main.to,
-      }
-    }
-  }, [])
-
-  function readSelection() {
+  function syncFromView() {
     const view = viewRef.current
-    if (view) {
-      const { from, to } = view.state.selection.main
-      selectionRef.current = { from, to }
-      return { from, to, doc: view.state.doc.toString() }
-    }
-    const { from, to } = selectionRef.current
-    return { from, to, doc: contentDraft }
-  }
-
-  function commitDoc(next, selection) {
-    pendingSelectionRef.current = selection || null
+    if (!view) return
+    const next = view.state.doc.toString()
     setContentDraft(next)
     scheduleSave({ content: next })
-    requestAnimationFrame(() => {
-      const view = viewRef.current
-      const pending = pendingSelectionRef.current
-      if (!view || !pending) return
-      const max = view.state.doc.length
-      const anchor = Math.min(pending.anchor ?? pending.from ?? 0, max)
-      const head = Math.min(pending.head ?? pending.to ?? anchor, max)
-      view.dispatch({
-        selection: EditorSelection.single(anchor, head),
-        scrollIntoView: true,
-      })
-      view.focus()
-      pendingSelectionRef.current = null
-    })
   }
 
   function applyWrap(before, after = before) {
-    const { from, to, doc } = readSelection()
-    const result = wrapRangeInDoc(doc, from, to, before, after)
-    commitDoc(result.next, result.selection)
+    const view = viewRef.current
+    if (!view) return
+    wrapSelection(view, before, after)
+    syncFromView()
   }
 
   function applyTogglePrefix(prefix) {
-    const { from, doc } = readSelection()
-    const result = toggleLinePrefixInDoc(doc, from, prefix)
-    commitDoc(result.next, result.selection)
+    const view = viewRef.current
+    if (!view) return
+    toggleLinePrefix(view, prefix)
+    syncFromView()
   }
 
   function applySnippet(snippet, cursorOffset) {
-    const { from, to, doc } = readSelection()
-    const result = insertSnippetInDoc(doc, from, to, snippet, cursorOffset)
-    commitDoc(result.next, result.selection)
+    const view = viewRef.current
+    if (!view) return
+    insertSnippet(view, snippet, cursorOffset)
+    syncFromView()
   }
 
   function applyText(text) {
-    const { from, to, doc } = readSelection()
-    const result = insertAtCursorInDoc(doc, from, to, text)
-    commitDoc(result.next, result.selection)
+    const view = viewRef.current
+    if (!view) return
+    insertAtCursor(view, text)
+    syncFromView()
   }
 
   useEffect(() => () => {
@@ -170,16 +135,25 @@ function NoteEditor({ userId, note }) {
   }
 
   async function handleImageFiles(fileList) {
-    const files = [...(fileList || [])].filter((file) => file.type.startsWith('image/'))
+    const files = [...(fileList || [])].filter(isImageFile)
     if (!files.length) return
-    let next = contentDraft
+    const view = viewRef.current
+    let next = view?.state.doc.toString() ?? contentDraft
     for (const file of files) {
-      const markdown = await storeAndInsertImage(userId, file, viewRef.current)
-      if (!viewRef.current && markdown) next += markdown
+      const live = viewRef.current
+      const before = live?.state.doc.toString() ?? next
+      const markdown = await storeAndInsertImage(userId, file, live)
+      if (!markdown) continue
+      const after = live?.state.doc.toString() ?? ''
+      next = live && after !== before ? after : `${next}${markdown}`
     }
-    if (viewRef.current) next = viewRef.current.state.doc.toString()
-    setContentDraft(next)
-    scheduleSave({ content: next })
+    if (next !== contentDraft) {
+      setContentDraft(next)
+      scheduleSave({ content: next })
+    } else {
+      scheduleSave({ content: next })
+    }
+    requestAnimationFrame(() => viewRef.current?.focus())
   }
 
   const showEditor = viewMode === 'edit' || viewMode === 'split'
@@ -190,7 +164,7 @@ function NoteEditor({ userId, note }) {
       <div className="notes-title-row">
         <input
           className="notes-title-input"
-          dir="auto"
+          dir={titleDraft.trim() ? 'auto' : 'rtl'}
           value={titleDraft}
           maxLength={160}
           spellCheck={false}
@@ -244,6 +218,7 @@ function NoteEditor({ userId, note }) {
         ref={imageInputRef}
         type="file"
         accept="image/*"
+        capture="environment"
         multiple
         hidden
         onChange={async (event) => {
@@ -255,18 +230,26 @@ function NoteEditor({ userId, note }) {
         {showEditor ? (
           <div
             className={`notes-source${dragging ? ' is-drop' : ''}`}
-            dir="auto"
             onDragOver={(event) => {
               if ([...event.dataTransfer.types].includes('Files')) {
                 event.preventDefault()
+                event.stopPropagation()
                 setDragging(true)
               }
             }}
             onDragLeave={() => setDragging(false)}
             onDrop={async (event) => {
               event.preventDefault()
+              event.stopPropagation()
               setDragging(false)
-              await handleImageFiles(event.dataTransfer.files)
+              await handleImageFiles(collectImageFiles(event.dataTransfer))
+            }}
+            onPaste={async (event) => {
+              const files = collectImageFiles(event.clipboardData)
+              if (!files.length) return
+              event.preventDefault()
+              event.stopPropagation()
+              await handleImageFiles(files)
             }}
           >
             {dragging ? <div className="notes-drop-hint">تصویر را اینجا رها کن</div> : null}
@@ -278,12 +261,10 @@ function NoteEditor({ userId, note }) {
               extensions={extensions}
               onCreateEditor={(view) => {
                 viewRef.current = view
-                selectionRef.current = {
-                  from: view.state.selection.main.from,
-                  to: view.state.selection.main.to,
-                }
               }}
-              onUpdate={handleEditorUpdate}
+              ref={(api) => {
+                if (api?.view) viewRef.current = api.view
+              }}
               onChange={handleEditorChange}
             />
           </div>

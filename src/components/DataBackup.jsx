@@ -17,9 +17,9 @@ export default function DataBackup() {
     ['جلسه‌ها', sessions.length],
     ['آزمون‌ها', tests.length],
     ['اشتباهات', mistakes.length],
-    ['مبحث‌ها', topics.length],
+    ['مباحث', topics.length],
     ['کارها', tasks.length],
-    ['رویدادها', events.length],
+    ['برنامه‌ها', events.length],
   ]
 
   async function handleFile(event) {
@@ -52,14 +52,14 @@ export default function DataBackup() {
     <section className="card">
       <h2>پشتیبان</h2>
       <p className="card-copy">
-        خروجی، همه داده‌ها و تنظیمات را در یک فایل JSON می‌دهد. ورودی، داده‌های حساب تو را جایگزین می‌کند.
+        می‌توانی همه داده‌ها و تنظیمات را در یک فایل پشتیبان دانلود کنی، یا با بارگذاری فایل، داده‌های حسابت را عوض کنی.
       </p>
       <div className="button-row">
         <button type="button" className="button button-primary" onClick={downloadBackup}>
-          خروجی JSON
+          دانلود پشتیبان
         </button>
         <button type="button" className="button" onClick={() => fileRef.current?.click()}>
-          ورودی JSON
+          بارگذاری پشتیبان
         </button>
         <input
           ref={fileRef}

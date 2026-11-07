@@ -22,11 +22,84 @@
 .analytics-head {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 12px;
 }
+
+.analytics-head h2 {
+  margin-bottom: 0;
+}
+
+.analytics-head-copy {
+  margin: 6px 0 0;
+}
+
+.goal-bars {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.goal-bars-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.goal-bars-meta span {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-bars .meter {
+  height: 8px;
+}
+
+.goal-bars li.is-low .meter span {
+  background: var(--info);
+}
+
+.goal-bars li.is-over .meter span {
+  background: var(--warning);
+}
+
+.task-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.task-summary li {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-solid) 50%, transparent);
+  padding: 8px 12px;
+  min-width: 88px;
+}
+
+.task-summary span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.task-summary strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
 
 .chart-box {
   width: 100%;
@@ -44,12 +117,15 @@
 }
 
 .chart-tip {
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface-solid) 82%, transparent);
   color: var(--text);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 8px 10px;
   font-size: 0.85rem;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .chart-tip p {

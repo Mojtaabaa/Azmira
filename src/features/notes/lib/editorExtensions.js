@@ -1,5 +1,7 @@
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
+import { HighlightStyle, syntaxHighlighting, bracketMatching, indentOnInput } from '@codemirror/language'
+import { tags } from '@lezer/highlight'
 import {
   EditorView,
   drawSelection,
@@ -9,18 +11,29 @@ import {
   placeholder,
 } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { bracketMatching, indentOnInput } from '@codemirror/language'
 import { searchKeymap } from '@codemirror/search'
 import { wrapSelection } from './editorFormat'
-import { storeAndInsertImage } from './insertImage'
+import { imageWidgets } from './imageWidgets'
+import { collectImageFiles, filesFromHtmlImages, storeAndInsertImage } from './insertImage'
 import { wikilinkCompletion } from './wikilinkComplete'
 import { useNotesStore } from '../store/notesStore'
 
 const EDITOR_FONT = '"Estedad", "Vazirmatn", Tahoma, sans-serif'
 
+const markdownMarks = HighlightStyle.define([
+  { tag: tags.heading, fontWeight: '700' },
+  { tag: tags.strong, fontWeight: '700' },
+  { tag: tags.emphasis, fontStyle: 'italic' },
+  { tag: tags.strikethrough, textDecoration: 'line-through' },
+  { tag: tags.monospace, fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace' },
+  { tag: tags.link, color: 'var(--link)' },
+])
+
 export function buildEditorExtensions(userId) {
   return [
     markdown({ base: markdownLanguage, codeLanguages: languages }),
+    syntaxHighlighting(markdownMarks),
+    imageWidgets(userId),
     wikilinkCompletion(() => useNotesStore.getState().notes),
     history(),
     drawSelection(),
@@ -29,6 +42,7 @@ export function buildEditorExtensions(userId) {
     bracketMatching(),
     highlightActiveLine(),
     EditorView.lineWrapping,
+    EditorView.contentAttributes.of({ dir: 'rtl', spellcheck: 'false' }),
     placeholder('بنویس…  [[پیوند]]  #برچسب  $ریاضی$'),
     keymap.of([
       indentWithTab,
@@ -37,6 +51,7 @@ export function buildEditorExtensions(userId) {
       ...searchKeymap,
       {
         key: 'Mod-b',
+        preventDefault: true,
         run: (view) => {
           wrapSelection(view, '**')
           return true
@@ -44,13 +59,15 @@ export function buildEditorExtensions(userId) {
       },
       {
         key: 'Mod-i',
+        preventDefault: true,
         run: (view) => {
           wrapSelection(view, '*')
           return true
         },
       },
       {
-        key: 'Mod-Shift-k',
+        key: 'Mod-Shift-s',
+        preventDefault: true,
         run: (view) => {
           wrapSelection(view, '~~')
           return true
@@ -59,13 +76,18 @@ export function buildEditorExtensions(userId) {
     ]),
     EditorView.domEventHandlers({
       paste(event, view) {
-        const items = [...(event.clipboardData?.items || [])]
-        const image = items.find((item) => item.type.startsWith('image/'))
-        if (!image) return false
+        const data = event.clipboardData
+        if (!data) return false
+        const files = collectImageFiles(data)
+        const html = data.getData('text/html') || ''
+        if (!files.length && !html.includes('<img')) return false
         event.preventDefault()
-        const file = image.getAsFile()
-        if (!file) return true
-        storeAndInsertImage(userId, file, view)
+        void (async () => {
+          const images = files.length ? files : await filesFromHtmlImages(html)
+          for (const file of images) {
+            await storeAndInsertImage(userId, file, view)
+          }
+        })()
         return true
       },
     }),
@@ -75,6 +97,7 @@ export function buildEditorExtensions(userId) {
         fontFamily: EDITOR_FONT,
         fontSize: '16.5px',
         backgroundColor: 'transparent',
+        direction: 'rtl',
       },
       '.cm-scroller': {
         fontFamily: EDITOR_FONT,
@@ -85,6 +108,7 @@ export function buildEditorExtensions(userId) {
         caretColor: 'var(--accent)',
         padding: '12px 8px 64px',
         minHeight: '100%',
+        textAlign: 'start',
       },
       '.cm-line': { padding: '0 2px' },
       '&.cm-focused .cm-cursor': {
@@ -97,6 +121,29 @@ export function buildEditorExtensions(userId) {
       '.cm-activeLine': { backgroundColor: 'var(--hover)' },
       '.cm-gutters': { background: 'transparent', border: 'none', color: 'var(--muted)' },
       '.cm-placeholder': { color: 'var(--muted)', opacity: 0.65 },
+      '.notes-cm-image-wrap': {
+        padding: '6px 0 10px',
+        maxWidth: '100%',
+      },
+      '.notes-cm-image-wrap.is-inline': {
+        display: 'inline-block',
+        verticalAlign: 'middle',
+        padding: '2px 0',
+      },
+      '.notes-cm-image-wrap.is-block': {
+        display: 'block',
+      },
+      '.notes-cm-image': {
+        display: 'block',
+        maxWidth: 'min(100%, 520px)',
+        maxHeight: '280px',
+        width: 'auto',
+        height: 'auto',
+        objectFit: 'contain',
+        borderRadius: '8px',
+        border: '1px solid var(--line)',
+        background: 'var(--surface-2)',
+      },
       '.cm-tooltip': {
         fontFamily: EDITOR_FONT,
         border: '1px solid var(--line)',

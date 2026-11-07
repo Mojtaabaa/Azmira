@@ -84,6 +84,13 @@ const ICONS = {
       <path d="M17.6 8.4l1.6-1.6" />
     </>
   ),
+  more: (
+    <>
+      <circle cx="6" cy="12" r="1.4" />
+      <circle cx="12" cy="12" r="1.4" />
+      <circle cx="18" cy="12" r="1.4" />
+    </>
+  ),
 }
 
 export default function NavIcon({ name }) {

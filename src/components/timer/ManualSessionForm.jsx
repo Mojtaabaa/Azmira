@@ -1,10 +1,14 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import DatePicker from '../DatePicker'
 import SubjectField from '../SubjectField'
-import { getSubjectById } from '../../data/subjects'
-import { subjectFromForm } from '../../utils/subjects'
+import TopicField from '../TopicField'
+import { useCollection } from '../../hooks/useCollection'
+import { useSettings } from '../../hooks/useSettings'
 import { dateAtCurrentTime, isFutureDate, isRealDateString, todayInputValue } from '../../utils/clock'
+import { studyGoalAdvice } from '../../utils/subjectGoals'
+import { subjectFromForm } from '../../utils/subjects'
 import { addOne } from '../../utils/storage'
+import { normalizeTopicName } from '../../utils/topics'
 
 const EMPTY = {
   subject: '',
@@ -15,20 +19,27 @@ const EMPTY = {
 }
 
 export default function ManualSessionForm() {
+  const settings = useSettings()
+  const sessions = useCollection('sessions')
   const [form, setForm] = useState(EMPTY)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const topics = getSubjectById(form.subject)?.topics || []
+  const [adviceAck, setAdviceAck] = useState('')
+  const advice = useMemo(
+    () => (form.subject ? studyGoalAdvice(form.subject, sessions, settings.subjectWeeklyGoals) : null),
+    [form.subject, sessions, settings.subjectWeeklyGoals],
+  )
 
   function update(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
     setError('')
     setMessage('')
+    if (field === 'subject') setAdviceAck('')
   }
 
   function handleSubmit(event) {
     event.preventDefault()
-    const topic = form.topic.trim()
+    const topic = normalizeTopicName(form.topic)
     const note = form.note.trim()
     const duration = Number(form.duration)
 
@@ -46,7 +57,7 @@ export default function ManualSessionForm() {
       return
     }
     if (!isRealDateString(form.date)) {
-      setError('یک تاریخ واقعی وارد کن.')
+      setError('یک تاریخ معتبر وارد کن.')
       return
     }
     if (isFutureDate(form.date)) {
@@ -54,7 +65,7 @@ export default function ManualSessionForm() {
       return
     }
     if (form.duration === '' || !Number.isInteger(duration) || duration <= 0) {
-      setError('دقیقه باید یک عدد درست مثبت باشد.')
+      setError('تعداد دقیقه باید عدد صحیح و مثبت باشد.')
       return
     }
     if (duration > 1440) {
@@ -62,7 +73,15 @@ export default function ManualSessionForm() {
       return
     }
 
-    addOne('sessions', {
+    const tip = studyGoalAdvice(subject.id, sessions, settings.subjectWeeklyGoals)
+    if (tip && (tip.tone === 'over' || tip.tone === 'nudge') && adviceAck !== `${subject.id}:${tip.tone}`) {
+      setAdviceAck(`${subject.id}:${tip.tone}`)
+      setError('')
+      setMessage('')
+      return
+    }
+
+    const saved = addOne('sessions', {
       subject: subject.id,
       topic,
       startTime: dateAtCurrentTime(form.date),
@@ -70,14 +89,18 @@ export default function ManualSessionForm() {
       type: 'manual',
       note,
     })
+    import('../../utils/timerPlanner').then(({ addPlannerEventForSession }) => {
+      addPlannerEventForSession(saved)
+    })
     setForm({ ...EMPTY, date: todayInputValue(), subject: subject.id })
+    setAdviceAck('')
     setMessage('جلسه اضافه شد.')
   }
 
   return (
     <section className="timer-card">
-      <h2>ثبت مطالعه بدون زمان‌سنج</h2>
-      <p className="timer-muted">برای کاری که تمام شده.</p>
+      <h2>ثبت دستی مطالعه</h2>
+      <p className="timer-muted">برای مطالعه‌ای که قبلاً انجام داده‌ای.</p>
       <form className="manual-form" noValidate onSubmit={handleSubmit}>
         <label>
           درس
@@ -85,19 +108,11 @@ export default function ManualSessionForm() {
         </label>
         <label>
           مبحث
-          <input
-            dir="auto"
+          <TopicField
+            subject={form.subject}
             value={form.topic}
-            maxLength={80}
-            autoComplete="off"
-            list="manual-topics"
-            onChange={(event) => update('topic', event.target.value)}
+            onChange={(next) => update('topic', next)}
           />
-          <datalist id="manual-topics">
-            {topics.map((name) => (
-              <option key={name} value={name} />
-            ))}
-          </datalist>
         </label>
         <label>
           تاریخ
@@ -138,6 +153,15 @@ export default function ManualSessionForm() {
       {error ? (
         <p className="form-message is-error" role="alert">
           {error}
+        </p>
+      ) : null}
+      {!error && advice && advice.tone !== 'ok' ? (
+        <p
+          className={advice.tone === 'over' ? 'form-message is-over' : 'form-message is-nudge'}
+          role="status"
+        >
+          {advice.message}
+          {adviceAck === `${form.subject}:${advice.tone}` ? ' دوباره افزودن را بزن.' : ''}
         </p>
       ) : null}
       {message ? (

@@ -5,7 +5,7 @@ export default function MistakeList({ mistakes, tests, onToggle, onDelete }) {
     <section className="card">
       <h2>مرورشده‌ها</h2>
       {mistakes.length === 0 ? (
-        <p className="card-copy">در این صافی اشتباه مرورشده‌ای نیست.</p>
+        <p className="card-copy">با این فیلتر، اشتباه مرور‌شده‌ای نیست.</p>
       ) : (
         <div className="mistake-stack">
           {mistakes.map((mistake) => (

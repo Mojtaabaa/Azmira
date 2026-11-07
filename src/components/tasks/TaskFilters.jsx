@@ -2,7 +2,7 @@ import { TASK_FILTERS } from '../../utils/tasks'
 
 export default function TaskFilters({ filter, counts, onChange }) {
   return (
-    <div className="todo-views" role="group" aria-label="صافی کارها">
+    <div className="todo-views" role="group" aria-label="فیلتر کارها">
       {TASK_FILTERS.map((item) => {
         const active = filter === item.id
         const overdue = item.id === 'overdue' && counts.overdue > 0 && !active

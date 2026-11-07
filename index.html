@@ -5,19 +5,23 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#05070b" />
+    <meta name="theme-color" content="#e8e9ee" />
     <title>رتبه</title>
     <script>
       (function () {
         try {
           var saved = localStorage.getItem('rotbe-theme')
-          var theme = saved === 'light' || saved === 'dark'
-            ? saved
-            : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+          var pref = saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system'
+          var theme = pref === 'system'
+            ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+            : pref
           document.documentElement.dataset.theme = theme
           document.documentElement.style.colorScheme = theme
+          var meta = document.querySelector('meta[name="theme-color"]')
+          if (meta) meta.setAttribute('content', theme === 'light' ? '#e8e9ee' : '#070708')
         } catch (e) {
           document.documentElement.dataset.theme = 'dark'
+          document.documentElement.style.colorScheme = 'dark'
         }
       })()
     </script>

@@ -1,14 +1,15 @@
 import { create } from 'zustand'
+import { SUBJECT_COLORS } from '../../../data/subjects'
 
 const DEFAULT_GROUPS = [
-  { id: 'math', query: 'tag:#ریاضی', color: '#1a3a6d', label: 'ریاضی' },
-  { id: 'physics', query: 'tag:#فیزیک', color: '#fdb827', label: 'فیزیک' },
-  { id: 'chemistry', query: 'tag:#شیمی', color: '#3d7ea6', label: 'شیمی' },
-  { id: 'biology', query: 'tag:#زیست', color: '#2f9e44', label: 'زیست' },
-  { id: 'lit', query: 'tag:#ادبیات', color: '#5b6b8c', label: 'ادبیات' },
-  { id: 'arabic', query: 'tag:#عربی', color: '#ae3ec9', label: 'عربی' },
-  { id: 'religion', query: 'tag:#دینی', color: '#e8590c', label: 'دینی' },
-  { id: 'english', query: 'tag:#زبان', color: '#1098ad', label: 'زبان' },
+  { id: 'math', query: 'tag:#ریاضی', color: SUBJECT_COLORS.math, label: 'ریاضی' },
+  { id: 'physics', query: 'tag:#فیزیک', color: SUBJECT_COLORS.physics, label: 'فیزیک' },
+  { id: 'chemistry', query: 'tag:#شیمی', color: SUBJECT_COLORS.chemistry, label: 'شیمی' },
+  { id: 'biology', query: 'tag:#زیست', color: SUBJECT_COLORS.chemistry, label: 'زیست' },
+  { id: 'lit', query: 'tag:#ادبیات', color: SUBJECT_COLORS.literature, label: 'ادبیات' },
+  { id: 'arabic', query: 'tag:#عربی', color: SUBJECT_COLORS.literature, label: 'عربی' },
+  { id: 'religion', query: 'tag:#دینی', color: SUBJECT_COLORS.geometry, label: 'دینی' },
+  { id: 'english', query: 'tag:#زبان', color: SUBJECT_COLORS.physics, label: 'زبان' },
 ]
 
 export const useGraphSettingsStore = create((set, get) => ({

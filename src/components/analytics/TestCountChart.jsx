@@ -1,4 +1,4 @@
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useChartTheme } from '../../hooks/useChartTheme'
 import ChartTip from './ChartTip'
 
@@ -15,8 +15,8 @@ export default function TestCountChart({ rows }) {
   return (
     <div className="chart-box">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={rows} margin={{ top: 8, right: 0, left: 8, bottom: weekly ? 24 : 0 }}>
-          <CartesianGrid vertical={false} stroke={theme.grid} />
+        <ComposedChart data={rows} margin={{ top: 8, right: 0, left: 8, bottom: weekly ? 24 : 0 }}>
+          <CartesianGrid stroke={theme.grid} />
           <XAxis
             reversed
             dataKey="axis"
@@ -28,10 +28,35 @@ export default function TestCountChart({ rows }) {
             axisLine={false}
             tickLine={false}
           />
-          <YAxis orientation="right" tick={{ fill: theme.text, fontSize: 12, fillOpacity: 0.65 }} axisLine={false} tickLine={false} width={36} allowDecimals={false} />
-          <Tooltip content={<ChartTip />} cursor={{ fill: 'var(--accent-soft)' }} />
-          <Bar dataKey="count" name="تست" fill={theme.fill} radius={4} maxBarSize={36} />
-        </BarChart>
+          <YAxis
+            orientation="right"
+            tick={{ fill: theme.text, fontSize: 12, fillOpacity: 0.65 }}
+            axisLine={false}
+            tickLine={false}
+            width={40}
+            allowDecimals={false}
+          />
+          <Tooltip content={<ChartTip />} />
+          <Bar
+            dataKey="count"
+            name="تست"
+            fill={theme.fill}
+            fillOpacity={0.28}
+            radius={[4, 4, 0, 0]}
+            maxBarSize={36}
+            isAnimationActive={false}
+          />
+          <Line
+            type="monotone"
+            dataKey="count"
+            name="تست"
+            stroke={theme.fill}
+            strokeWidth={2.4}
+            dot={{ r: 4, fill: theme.fill, stroke: theme.tipBg, strokeWidth: 2 }}
+            activeDot={{ r: 6 }}
+            legendType="none"
+          />
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   )

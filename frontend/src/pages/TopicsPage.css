@@ -1,0 +1,89 @@
+.topic-form,
+.topic-groups,
+.suggestion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.topic-form {
+  margin-top: 16px;
+}
+
+.topic-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.topic-form input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 10px 12px;
+}
+
+.topic-groups {
+  gap: 16px;
+}
+
+.topic-list,
+.suggestion-list {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.topic-list li,
+.suggestion-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.topic-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.topic-tag {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.topic-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.topic-actions .button,
+.suggestion-list .button {
+  margin-top: 0;
+}
+
+@media (max-width: 760px) {
+  .topic-list li,
+  .suggestion-list li {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .topic-actions .button,
+  .suggestion-list .button {
+    width: 100%;
+  }
+}

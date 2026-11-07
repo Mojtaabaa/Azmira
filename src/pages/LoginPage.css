@@ -7,7 +7,10 @@
   padding: 24px 16px;
   background:
     var(--auth-glow),
-    var(--bg);
+    radial-gradient(900px 520px at 85% 10%, var(--orb-a), transparent 55%),
+    radial-gradient(700px 480px at 10% 90%, var(--orb-b), transparent 50%),
+    linear-gradient(165deg, var(--bg), var(--bg-deep));
+  animation: soft-fade 500ms var(--ease-out) both;
 }
 
 .auth-theme {
@@ -22,9 +25,13 @@
   flex-direction: column;
   gap: 18px;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--surface);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface-solid) 74%, transparent);
   padding: 24px;
+  box-shadow: var(--shadow-lift);
+  backdrop-filter: blur(22px) saturate(1.25);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+  animation: sheet-up 420ms var(--ease-out) both;
 }
 
 .auth-brand {
@@ -74,7 +81,7 @@
 
 .auth-form input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--border-accent);
 }
 
 .auth-form .form-message {

@@ -3,7 +3,19 @@ import DatePicker from '../DatePicker'
 import SubjectField from '../SubjectField'
 import { EVENT_TYPES } from '../../utils/events'
 
-export default function EventForm({ value, editing, done, error, namePrompt, onChange, onSubmit, onCancel, onToggle, onDelete }) {
+export default function EventForm({
+  value,
+  editing,
+  done,
+  error,
+  namePrompt,
+  onChange,
+  onSubmit,
+  onCancel,
+  onToggle,
+  onDelete,
+  onStartTimer,
+}) {
   const [confirming, setConfirming] = useState(false)
 
   useEffect(() => {
@@ -16,7 +28,7 @@ export default function EventForm({ value, editing, done, error, namePrompt, onC
     <section className="card cal-sheet" id="event-form" onKeyDown={(event) => {
       if (event.key === 'Escape') onCancel()
     }}>
-      <h2>{namePrompt ? 'اسم این مطالعه' : editing ? 'ویرایش رویداد' : 'رویداد تازه'}</h2>
+      <h2>{namePrompt ? 'نام این جلسه مطالعه' : editing ? 'ویرایش برنامه' : 'برنامهٔ جدید'}</h2>
       {namePrompt ? <p className="card-copy">اسم را به موضوع همین جلسه عوض کن.</p> : null}
       <form className="event-form" noValidate onSubmit={onSubmit}>
         <label className="span-2">
@@ -33,7 +45,7 @@ export default function EventForm({ value, editing, done, error, namePrompt, onC
         <label>
           نوع
           <select value={value.type} onChange={(event) => onChange('type', event.target.value)}>
-            <option value="">انتخاب</option>
+            <option value="">نوع را انتخاب کن</option>
             {EVENT_TYPES.map((item) => (
               <option key={item.id} value={item.id}>{item.label}</option>
             ))}
@@ -49,19 +61,24 @@ export default function EventForm({ value, editing, done, error, namePrompt, onC
         </label>
         <label>
           شروع
-          <input type="time" value={value.startTime} onChange={(event) => onChange('startTime', event.target.value)} />
+          <input type="time" step="900" value={value.startTime} onChange={(event) => onChange('startTime', event.target.value)} />
         </label>
         <label>
           پایان
-          <input type="time" value={value.endTime} onChange={(event) => onChange('endTime', event.target.value)} />
+          <input type="time" step="900" value={value.endTime} onChange={(event) => onChange('endTime', event.target.value)} />
         </label>
         {error ? (
           <p className="form-message is-error span-2" role="alert">{error}</p>
         ) : null}
         <div className="button-row span-2">
           <button type="submit" className="button button-primary">
-            {namePrompt ? 'ثبت مطالعه' : editing ? 'ذخیره تغییرات' : 'افزودن رویداد'}
+            {namePrompt ? 'ثبت مطالعه' : editing ? 'ذخیره تغییرات' : 'افزودن به برنامه'}
           </button>
+          {onStartTimer && (value.type === 'study' || value.subject) ? (
+            <button type="button" className="button" onClick={onStartTimer}>
+              شروع زمان‌سنج
+            </button>
+          ) : null}
           {editing ? (
             <button type="button" className="button" aria-pressed={done} onClick={onToggle}>
               {done ? 'انجام نشده' : 'انجام شد'}

@@ -59,7 +59,7 @@ export default function MistakesPage() {
     <div className="page">
       <header className="page-header">
         <h1>اشتباهات</h1>
-        <p>آنچه را غلط زدی صافی کن و آن‌هایی را که هنوز مرور نکردی کار کن.</p>
+        <p>غلط‌ها را فیلتر کن و آن‌هایی را که هنوز مرور نکردی مرور کن.</p>
         <ExamNav />
       </header>
       {mistakes.length === 0 ? (

@@ -23,6 +23,20 @@ export function formatMinutes(totalMinutes) {
   return `${hours} ساعت و ${rest} دقیقه`
 }
 
+export function formatPausedSeconds(totalSeconds) {
+  const seconds = Math.max(0, Math.round(Number(totalSeconds) || 0))
+  if (seconds < 60) return `${seconds} ثانیه`
+  const minutes = Math.floor(seconds / 60)
+  const rest = seconds % 60
+  if (minutes < 60) {
+    return rest > 0 ? `${minutes} دقیقه و ${rest} ثانیه` : `${minutes} دقیقه`
+  }
+  const hours = Math.floor(minutes / 60)
+  const minRest = minutes % 60
+  if (minRest === 0) return `${hours} ساعت`
+  return `${hours} ساعت و ${minRest} دقیقه`
+}
+
 export function formatTimeOfDay(value) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''

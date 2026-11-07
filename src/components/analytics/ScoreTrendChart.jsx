@@ -1,6 +1,6 @@
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useChartTheme } from '../../hooks/useChartTheme'
-import { SUBJECTS } from '../../data/subjects'
+import { SUBJECT_COLORS, SUBJECTS } from '../../data/subjects'
 import ChartTip from './ChartTip'
 
 const DASH = {
@@ -11,7 +11,13 @@ const DASH = {
   literature: '12 4 2 4',
 }
 
-const FALLBACK = ['#1a3a6d', '#fdb827', '#3d7ea6', '#c4782a', '#5b6b8c']
+const FALLBACK = [
+  SUBJECT_COLORS.math,
+  SUBJECT_COLORS.physics,
+  SUBJECT_COLORS.chemistry,
+  SUBJECT_COLORS.geometry,
+  SUBJECT_COLORS.literature,
+]
 
 export default function ScoreTrendChart({ series }) {
   const theme = useChartTheme()

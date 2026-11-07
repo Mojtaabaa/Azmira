@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import TaskFilters from '../components/tasks/TaskFilters'
 import TaskForm from '../components/tasks/TaskForm'
 import TaskList from '../components/tasks/TaskList'
@@ -16,14 +17,14 @@ const EMPTY_FORM = {
 
 const EMPTY_TEXT = {
   today: 'برای امروز کاری نیست.',
-  upcoming: 'کار آینده‌ای نیست.',
+  upcoming: 'کاری برای بعد نیست.',
   overdue: 'کار عقب‌افتاده‌ای نیست.',
   done: 'کار انجام‌شده‌ای نیست.',
 }
 
 const VIEW_TITLE = {
   today: 'امروز',
-  upcoming: 'آینده',
+  upcoming: 'بعدی',
   overdue: 'عقب‌افتاده',
   done: 'انجام‌شده',
 }
@@ -32,7 +33,13 @@ export default function TasksPage() {
   const tasks = useCollection('tasks')
   const [form, setForm] = useState(EMPTY_FORM)
   const [editingId, setEditingId] = useState(null)
+  const [params] = useSearchParams()
   const [filter, setFilter] = useState('today')
+
+  useEffect(() => {
+    const next = params.get('filter')
+    if (next && VIEW_TITLE[next]) setFilter(next)
+  }, [params])
   const [error, setError] = useState('')
   const today = todayInputValue()
   const counts = countTaskBuckets(tasks, today)
@@ -91,7 +98,11 @@ export default function TasksPage() {
   }
 
   function toggleDone(task) {
-    updateOne('tasks', task.id, { done: !task.done })
+    const done = !task.done
+    updateOne('tasks', task.id, {
+      done,
+      completedAt: done ? new Date().toISOString() : '',
+    })
   }
 
   function startEdit(task) {

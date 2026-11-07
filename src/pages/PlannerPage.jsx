@@ -1,17 +1,25 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import CalendarGrid from '../components/planner/CalendarGrid'
 import EventForm from '../components/planner/EventForm'
-import JalaliToggle from '../components/planner/JalaliToggle'
 import SubjectLegend from '../components/planner/SubjectLegend'
 import UpcomingExams from '../components/planner/UpcomingExams'
 import WeekNav from '../components/planner/WeekNav'
 import { getSubjectById } from '../data/subjects'
 import { useCollection } from '../hooks/useCollection'
 import { todayInputValue } from '../utils/clock'
-import { buildEvent, formatMinutesAsTime, shiftTimes, upcomingExams } from '../utils/events'
+import {
+  DEFAULT_EVENT_MINUTES,
+  buildEvent,
+  formatMinutesAsTime,
+  shiftTimes,
+  upcomingExams,
+} from '../utils/events'
 import { subjectFromForm } from '../utils/subjects'
 import { addOne, deleteOne, updateOne } from '../utils/storage'
-import { daysOfWeek, formatGregorian, formatJalali, saturdayOf, shiftDay } from '../utils/week'
+import { startTimerFromEvent } from '../utils/timerPlanner'
+import { selectPhase, setTimerTarget } from '../utils/timerStore'
+import { daysOfWeek, formatJalali, saturdayOf, shiftDay } from '../utils/week'
 import './PlannerPage.css'
 
 const EMPTY_FORM = {
@@ -25,10 +33,10 @@ const EMPTY_FORM = {
 }
 
 export default function PlannerPage() {
+  const navigate = useNavigate()
   const events = useCollection('events')
   const today = todayInputValue()
   const [anchor, setAnchor] = useState(() => saturdayOf(today))
-  const [showJalali, setShowJalali] = useState(true)
   const [draft, setDraft] = useState(null)
   const [dropTarget, setDropTarget] = useState(null)
   const [error, setError] = useState('')
@@ -36,8 +44,7 @@ export default function PlannerPage() {
   const days = daysOfWeek(anchor)
   const exams = upcomingExams(events, today)
   const nowMinutes = clock.getHours() * 60 + clock.getMinutes()
-  const weekLabel = `${days[0].name} ${formatGregorian(days[0].date)} تا ${days[6].name} ${formatGregorian(days[6].date)}`
-  const jalaliLabel = showJalali ? `${formatJalali(days[0].date)} تا ${formatJalali(days[6].date)}` : ''
+  const weekLabel = `${days[0].name} ${formatJalali(days[0].date)} تا ${days[6].name} ${formatJalali(days[6].date)}`
 
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 60000)
@@ -54,14 +61,21 @@ export default function PlannerPage() {
     setError('')
   }
 
-  function openCreate(date, minutes) {
-    const start = minutes == null ? '' : formatMinutesAsTime(minutes)
-    const endMinutes = minutes == null ? null : Math.min(minutes + 60, 23 * 60 + 59)
+  function openCreate(date, startMinutes, endMinutes) {
+    const timed = startMinutes != null && Number.isFinite(startMinutes)
+    const start = timed ? formatMinutesAsTime(startMinutes) : ''
+    const end = timed
+      ? formatMinutesAsTime(
+          endMinutes != null && endMinutes > startMinutes
+            ? endMinutes
+            : Math.min(startMinutes + DEFAULT_EVENT_MINUTES, 23 * 60 + 59),
+        )
+      : ''
     setDraft({
       ...EMPTY_FORM,
       date,
       startTime: start,
-      endTime: endMinutes == null ? '' : formatMinutesAsTime(endMinutes),
+      endTime: end,
     })
     setError('')
   }
@@ -70,7 +84,7 @@ export default function PlannerPage() {
     const subject = getSubjectById(subjectId)
     const minutes = slot.allday || slot.minutes === '' ? null : Number(slot.minutes)
     const start = minutes == null ? '' : formatMinutesAsTime(minutes)
-    const endMinutes = minutes == null ? null : Math.min(minutes + 60, 23 * 60 + 59)
+    const endMinutes = minutes == null ? null : Math.min(minutes + DEFAULT_EVENT_MINUTES * 2, 23 * 60 + 59)
     setDropTarget(null)
     setDraft({
       ...EMPTY_FORM,
@@ -130,7 +144,7 @@ export default function PlannerPage() {
         addOne('events', { ...result.event, done: false })
       }
     } catch (saveError) {
-      setError(saveError.message || 'این رویداد ذخیره نشد.')
+      setError(saveError.message || 'این برنامه ذخیره نشد.')
       return
     }
 
@@ -181,26 +195,23 @@ export default function PlannerPage() {
     <div className="page planner-page">
       <header className="page-header">
         <h1>برنامه</h1>
-        <p>روی یک خانه بزن و بنویس، یا درس را از بالا روی ساعت بکش. بدنه رویداد را بکش تا جابه‌جا شود. لبه بالا و پایین زمان را ۱۵ دقیقه ۱۵ دقیقه عوض می‌کند.</p>
+        <p>روی جدول بزن و بکش تا بازهٔ ۱۵ دقیقه‌ای بگیری؛ رها کن تا برنامه ساخته شود. یک کلیک هم نیم‌ساعت می‌گذارد. درس را از بالا بکش، برنامه‌ها را جابه‌جا کن و از لبه‌ها زمان را عوض کن. Escape انتخاب را لغو می‌کند.</p>
       </header>
       <div className="stack">
-        <UpcomingExams exams={exams} today={today} showJalali={showJalali} onEdit={openEdit} />
+        <UpcomingExams exams={exams} today={today} onEdit={openEdit} />
         <div className="planner-toolbar">
           <WeekNav
             label={weekLabel}
-            jalaliLabel={jalaliLabel}
             onPrevious={() => setAnchor(shiftDay(anchor, -7))}
             onNext={() => setAnchor(shiftDay(anchor, 7))}
             onToday={() => setAnchor(saturdayOf(today))}
           />
-          <JalaliToggle on={showJalali} onChange={setShowJalali} />
         </div>
         <SubjectLegend onTarget={setDropTarget} onDrop={openQuickStudy} />
         <CalendarGrid
           days={days}
           events={events}
           today={today}
-          showJalali={showJalali}
           nowMinutes={nowMinutes}
           editingId={draft?.id || null}
           dropTarget={dropTarget}
@@ -224,6 +235,10 @@ export default function PlannerPage() {
             onCancel={closeDraft}
             onToggle={toggleDone}
             onDelete={removeEvent}
+            onStartTimer={() => {
+              startTimerFromEvent(draft, { setTimerTarget, selectPhase, navigate })
+              closeDraft()
+            }}
           />
         </>
       ) : null}

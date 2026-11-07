@@ -34,7 +34,7 @@ export default function SubjectLegend({ onTarget, onDrop }) {
 
   return (
     <div className="subject-drop">
-      <p>درس را روی تاریخ یا ساعت بکش.</p>
+      <p>درس را روی یک ربع‌ساعت یا روز بکش تا مطالعه ثبت شود.</p>
       <ul className="subject-legend" aria-label="درس‌ها">
         {subjects.map((subject) => (
           <li key={subject.id}>

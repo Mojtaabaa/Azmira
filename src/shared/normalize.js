@@ -41,7 +41,14 @@ export function createEmptyData() {
     topics: [],
     tasks: [],
     events: [],
-    settings: { ...DEFAULT_SETTINGS, customSubjects: [], hiddenSubjects: [], subjectWeights: {} },
+    settings: {
+      ...DEFAULT_SETTINGS,
+      customSubjects: [],
+      hiddenSubjects: [],
+      subjectWeights: {},
+      subjectWeeklyGoals: {},
+      hiddenTopics: [],
+    },
   }
 }
 
@@ -113,6 +120,27 @@ function normalizeWeights(value, strict) {
   return next
 }
 
+function normalizeSubjectWeeklyGoals(value, strict) {
+  if (value === undefined) return {}
+  if (!isPlainObject(value)) {
+    if (strict) throw new Error('هدف هفتگی درس‌ها باید یک شیء باشد.')
+    return {}
+  }
+
+  const next = {}
+  Object.entries(value).forEach(([key, raw]) => {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') return
+    const minutes = Number(raw)
+    const idOk = /^[A-Za-z0-9-]{1,90}$/.test(key)
+    if (!idOk || !Number.isInteger(minutes) || minutes < 15 || minutes > 10080 || minutes % 15 !== 0) {
+      if (strict) throw new Error('هدف هفتگی هر درس باید بین ۰٫۲۵ تا ۱۶۸ ساعت باشد (گام ۱۵ دقیقه).')
+      return
+    }
+    next[key] = minutes
+  })
+  return next
+}
+
 const BUILTIN_SUBJECT_IDS = new Set(['math', 'physics', 'chemistry', 'geometry', 'literature'])
 
 function normalizeHiddenSubjects(value, strict) {
@@ -134,13 +162,48 @@ function normalizeHiddenSubjects(value, strict) {
   return next
 }
 
+function normalizeHiddenTopics(value, strict) {
+  if (value === undefined) return []
+  if (!Array.isArray(value)) {
+    if (strict) throw new Error('مبحث‌های حذف‌شده باید یک فهرست باشد.')
+    return []
+  }
+  const next = []
+  const seen = new Set()
+  value.forEach((item) => {
+    if (typeof item !== 'string' || !item.includes('::')) {
+      if (strict) throw new Error('شناسه مبحث حذف‌شده درست نیست.')
+      return
+    }
+    const key = item.trim()
+    if (!key || seen.has(key)) return
+    seen.add(key)
+    next.push(key)
+  })
+  return next
+}
+
 export function normalizeSettings(settings, strict) {
   if (!isPlainObject(settings)) {
     if (strict) throw new Error('تنظیمات باید یک شیء باشد.')
-    return { ...DEFAULT_SETTINGS, customSubjects: [], hiddenSubjects: [], subjectWeights: {} }
+    return {
+      ...DEFAULT_SETTINGS,
+      customSubjects: [],
+      hiddenSubjects: [],
+      subjectWeights: {},
+      subjectWeeklyGoals: {},
+      hiddenTopics: [],
+    }
   }
 
-  const next = { ...DEFAULT_SETTINGS, customSubjects: [], hiddenSubjects: [], subjectWeights: {} }
+  const next = {
+    ...DEFAULT_SETTINGS,
+    customSubjects: [],
+    hiddenSubjects: [],
+    subjectWeights: {},
+    subjectWeeklyGoals: {},
+    hiddenTopics: [],
+  }
 
   for (const key of NUMBER_SETTINGS) {
     if (settings[key] === undefined) continue
@@ -163,20 +226,27 @@ export function normalizeSettings(settings, strict) {
   if (settings.dailyGoalMinutes !== undefined) {
     let goal = Number(settings.dailyGoalMinutes)
     if (goal === 180) goal = 240
-    if (Number.isInteger(goal) && goal >= 60 && goal <= 1440 && goal % 60 === 0) next.dailyGoalMinutes = goal
-    else if (strict) throw new Error('هدف روزانه باید یک عدد از 1 تا 24 ساعت باشد.')
+    if (Number.isInteger(goal) && goal >= 15 && goal <= 1440 && goal % 15 === 0) next.dailyGoalMinutes = goal
+    else if (strict) throw new Error('هدف روزانه باید بین ۰٫۲۵ تا ۲۴ ساعت باشد (گام ۱۵ دقیقه).')
   }
 
   if (settings.weeklyGoalMinutes !== undefined) {
     let goal = Number(settings.weeklyGoalMinutes)
     if (goal === 1260) goal = 1680
-    if (Number.isInteger(goal) && goal >= 60 && goal <= 10080 && goal % 60 === 0) next.weeklyGoalMinutes = goal
-    else if (strict) throw new Error('هدف هفته باید یک عدد از 1 تا 168 ساعت باشد.')
+    if (Number.isInteger(goal) && goal >= 15 && goal <= 10080 && goal % 15 === 0) next.weeklyGoalMinutes = goal
+    else if (strict) throw new Error('هدف هفته باید بین ۰٫۲۵ تا ۱۶۸ ساعت باشد (گام ۱۵ دقیقه).')
   }
+
+  if (settings.syncSessionsToPlanner === undefined) next.syncSessionsToPlanner = true
+  else if (typeof settings.syncSessionsToPlanner === 'boolean') next.syncSessionsToPlanner = settings.syncSessionsToPlanner
+  else if (strict) throw new Error('همگام‌سازی زمان‌سنج و برنامه باید بولین باشد.')
+  else next.syncSessionsToPlanner = true
 
   next.customSubjects = normalizeCustomSubjects(settings.customSubjects, strict)
   next.hiddenSubjects = normalizeHiddenSubjects(settings.hiddenSubjects, strict)
   next.subjectWeights = normalizeWeights(settings.subjectWeights, strict)
+  next.subjectWeeklyGoals = normalizeSubjectWeeklyGoals(settings.subjectWeeklyGoals, strict)
+  next.hiddenTopics = normalizeHiddenTopics(settings.hiddenTopics, strict)
   return next
 }
 

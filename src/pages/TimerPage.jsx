@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import NavIcon from '../components/NavIcon'
 import ManualSessionForm from '../components/timer/ManualSessionForm'
@@ -7,9 +7,16 @@ import StudyTarget from '../components/timer/StudyTarget'
 import TimerClock from '../components/timer/TimerClock'
 import TimerControls from '../components/timer/TimerControls'
 import TodaySessions from '../components/timer/TodaySessions'
+import { useCollection } from '../hooks/useCollection'
 import { useSettings } from '../hooks/useSettings'
 import { useTimer } from '../hooks/useTimer'
+import {
+  subjectWeeklyGoalMinutes,
+  studyGoalAdvice,
+  weekSubjectMinutes,
+} from '../utils/subjectGoals'
 import { finishFocusEarly, pauseTimer, resetTimer, selectPhase, setTimerTarget, skipTimer, startTimer } from '../utils/timerStore'
+import { normalizeTopicName } from '../utils/topics'
 import './TimerPage.css'
 
 const MINUTE_KEYS = {
@@ -21,7 +28,9 @@ const MINUTE_KEYS = {
 export default function TimerPage() {
   const timer = useTimer()
   const settings = useSettings()
+  const sessions = useCollection('sessions')
   const [error, setError] = useState('')
+  const [adviceAck, setAdviceAck] = useState('')
   const focusLocked = timer.phase === 'focus' && (timer.running || timer.paused)
   const showingSession = focusLocked && timer.focusSession
   const subject = showingSession ? timer.focusSession.subject : (timer.targetSubject || 'math')
@@ -32,6 +41,16 @@ export default function TimerPage() {
   const totalMs = (MINUTE_KEYS[timer.phase] ? settings[MINUTE_KEYS[timer.phase]] : settings.pomodoroWork) * 60 * 1000
   const progress = totalMs > 0 ? remainingMs / totalMs : 0
 
+  const weekDone = useMemo(() => {
+    const totals = weekSubjectMinutes(sessions)
+    return totals.get(subject) || 0
+  }, [sessions, subject])
+  const weekGoal = subjectWeeklyGoalMinutes(settings.subjectWeeklyGoals, subject)
+  const advice = useMemo(
+    () => studyGoalAdvice(subject, sessions, settings.subjectWeeklyGoals),
+    [subject, sessions, settings.subjectWeeklyGoals],
+  )
+
   function handleStart() {
     if (timer.phase === 'focus' && !timer.focusSession && !topic.trim()) {
       setError('قبل از شروع، مبحث را بنویس.')
@@ -41,11 +60,25 @@ export default function TimerPage() {
       setError('قبل از شروع، درس را بنویس.')
       return
     }
-    const started = startTimer({ subject, topic })
+
+    if (
+      timer.phase === 'focus'
+      && !timer.focusSession
+      && advice
+      && (advice.tone === 'over' || advice.tone === 'nudge')
+      && adviceAck !== `${subject}:${advice.tone}`
+    ) {
+      setAdviceAck(`${subject}:${advice.tone}`)
+      setError('')
+      return
+    }
+
+    const started = startTimer({ subject, topic: normalizeTopicName(topic) })
     if (!started) {
       setError('قبل از شروع، درس و مبحث را بنویس.')
       return
     }
+    setAdviceAck('')
     setError('')
   }
 
@@ -56,7 +89,12 @@ export default function TimerPage() {
           subject={subject}
           topic={topic}
           locked={focusLocked}
-          onSubjectChange={(id) => setTimerTarget({ subject: id })}
+          weekDone={weekDone}
+          weekGoal={weekGoal}
+          onSubjectChange={(id) => {
+            setAdviceAck('')
+            setTimerTarget({ subject: id })
+          }}
           onTopicChange={(value) => setTimerTarget({ topic: value })}
         />
         <PhaseTabs
@@ -72,6 +110,7 @@ export default function TimerPage() {
           onPause={pauseTimer}
           onReset={() => {
             setError('')
+            setAdviceAck('')
             resetTimer()
           }}
           onSkip={() => {
@@ -96,14 +135,28 @@ export default function TimerPage() {
             {error}
           </p>
         ) : null}
-        {!error && timer.notice ? (
+        {!error && advice && advice.tone !== 'ok' ? (
+          <p
+            className={advice.tone === 'over' ? 'timer-feedback is-over' : 'timer-feedback is-nudge'}
+            role="status"
+          >
+            {advice.message}
+            {!focusLocked && adviceAck === `${subject}:${advice.tone}` ? ' دوباره شروع را بزن.' : ''}
+          </p>
+        ) : null}
+        {!error && !(advice && advice.tone !== 'ok') && timer.notice ? (
           <p className="timer-feedback" role="status">
             {timer.notice}
           </p>
         ) : null}
+        {!error && !timer.notice && advice?.tone === 'ok' && !focusLocked ? (
+          <p className="timer-feedback" role="status">
+            {advice.message}
+          </p>
+        ) : null}
       </section>
 
-      <Link className="timer-settings-link" to="/settings#timer-lengths" aria-label="تنظیم زمان">
+      <Link className="timer-settings-link" to="/settings#subject-weekly-goals" aria-label="هدف هفتگی درس‌ها">
         <NavIcon name="settings" />
       </Link>
 
