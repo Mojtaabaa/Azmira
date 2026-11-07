@@ -12,6 +12,19 @@ public static class DatabaseBootstrap
         await using var scope = services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var workspaces = scope.ServiceProvider.GetRequiredService<WorkspaceService>();
+        var env = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
+
+        if (env.IsEnvironment("Testing"))
+        {
+            // In-memory / test hosts cannot apply SQL migrations; EnsureCreated is sufficient.
+            await db.Database.EnsureCreatedAsync(cancellationToken);
+            await DefaultGamificationSeed.EnsureAsync(db, cancellationToken);
+            await DefaultStoreSeed.EnsureAsync(db, cancellationToken);
+            var srsTesting = scope.ServiceProvider.GetRequiredService<SpacedRepetitionService>();
+            await srsTesting.EnsureDefaultProfileAsync(cancellationToken);
+            logger.LogInformation("Testing database EnsureCreated completed.");
+            return;
+        }
 
         await PrepareLegacyEnsureCreatedAsync(db, logger, cancellationToken);
         await db.Database.MigrateAsync(cancellationToken);

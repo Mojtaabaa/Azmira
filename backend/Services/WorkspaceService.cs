@@ -145,18 +145,37 @@ public sealed class WorkspaceService(AppDbContext db)
 
     public async Task BackfillUserDataAsync(int userId, Guid workspaceId, CancellationToken cancellationToken)
     {
-        await db.StudyRecords.Where(item => item.UserId == userId && item.WorkspaceId == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.WorkspaceId, workspaceId), cancellationToken);
-        await db.Notes.Where(item => item.UserId == userId && item.WorkspaceId == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.WorkspaceId, workspaceId), cancellationToken);
-        await db.Folders.Where(item => item.UserId == userId && item.WorkspaceId == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.WorkspaceId, workspaceId), cancellationToken);
-        await db.Trash.Where(item => item.UserId == userId && item.WorkspaceId == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.WorkspaceId, workspaceId), cancellationToken);
-        await db.NoteImages.Where(item => item.UserId == userId && item.WorkspaceId == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.WorkspaceId, workspaceId), cancellationToken);
-        await db.NoteSettings.Where(item => item.UserId == userId && item.WorkspaceId == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.WorkspaceId, workspaceId), cancellationToken);
+        if (db.Database.IsRelational())
+        {
+            await db.StudyRecords.Where(item => item.UserId == userId && item.WorkspaceId == null)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.WorkspaceId, workspaceId), cancellationToken);
+            await db.Notes.Where(item => item.UserId == userId && item.WorkspaceId == null)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.WorkspaceId, workspaceId), cancellationToken);
+            await db.Folders.Where(item => item.UserId == userId && item.WorkspaceId == null)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.WorkspaceId, workspaceId), cancellationToken);
+            await db.Trash.Where(item => item.UserId == userId && item.WorkspaceId == null)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.WorkspaceId, workspaceId), cancellationToken);
+            await db.NoteImages.Where(item => item.UserId == userId && item.WorkspaceId == null)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.WorkspaceId, workspaceId), cancellationToken);
+            await db.NoteSettings.Where(item => item.UserId == userId && item.WorkspaceId == null)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(item => item.WorkspaceId, workspaceId), cancellationToken);
+            return;
+        }
+
+        // In-memory / test providers lack ExecuteUpdate; update tracked entities instead.
+        foreach (var row in await db.StudyRecords.Where(item => item.UserId == userId && item.WorkspaceId == null).ToListAsync(cancellationToken))
+            row.WorkspaceId = workspaceId;
+        foreach (var row in await db.Notes.Where(item => item.UserId == userId && item.WorkspaceId == null).ToListAsync(cancellationToken))
+            row.WorkspaceId = workspaceId;
+        foreach (var row in await db.Folders.Where(item => item.UserId == userId && item.WorkspaceId == null).ToListAsync(cancellationToken))
+            row.WorkspaceId = workspaceId;
+        foreach (var row in await db.Trash.Where(item => item.UserId == userId && item.WorkspaceId == null).ToListAsync(cancellationToken))
+            row.WorkspaceId = workspaceId;
+        foreach (var row in await db.NoteImages.Where(item => item.UserId == userId && item.WorkspaceId == null).ToListAsync(cancellationToken))
+            row.WorkspaceId = workspaceId;
+        foreach (var row in await db.NoteSettings.Where(item => item.UserId == userId && item.WorkspaceId == null).ToListAsync(cancellationToken))
+            row.WorkspaceId = workspaceId;
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<Workspace?> FindPersonalAsync(int userId, CancellationToken cancellationToken) =>

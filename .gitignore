@@ -12,6 +12,8 @@ server/data
 dist
 backend/bin
 backend/obj
+backend.Tests/bin
+backend.Tests/obj
 backend/wwwroot
 publish
 dist-ssr

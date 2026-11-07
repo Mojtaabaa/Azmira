@@ -30,9 +30,24 @@ public class LearningIntelligenceTests
         services.AddScoped<AssessmentService>();
         services.AddScoped<AiContextBuilder>();
         services.AddScoped<AiCoachService>();
+        services.AddSingleton<Microsoft.Extensions.Hosting.IHostEnvironment>(new TestHostEnvironment());
+        services.AddSingleton(Options.Create(new KonkoorHelp.Api.Services.Integrations.IntegrationsOptions
+        {
+            WebhookProtectionKey = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)),
+        }));
+        services.AddSingleton<KonkoorHelp.Api.Services.Integrations.WebhookSecretProtector>();
+        services.AddSingleton<KonkoorHelp.Api.Services.Integrations.IWebhookDnsResolver, KonkoorHelp.Api.Services.Integrations.SystemWebhookDnsResolver>();
+        services.AddSingleton<KonkoorHelp.Api.Services.Integrations.IWebhookSocketConnector, KonkoorHelp.Api.Services.Integrations.TcpWebhookSocketConnector>();
+        services.AddSingleton<KonkoorHelp.Api.Services.Integrations.WebhookUrlSafety>();
         services.AddScoped<KonkoorHelp.Api.Services.Integrations.WebhookService>();
-        services.AddHttpClient(nameof(KonkoorHelp.Api.Services.Integrations.WebhookService));
+        services.AddHttpClient(nameof(KonkoorHelp.Api.Services.Integrations.WebhookService), client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+        }).ConfigurePrimaryHttpMessageHandler(sp =>
+            KonkoorHelp.Api.Services.Integrations.WebhookSocketsHttpHandlerFactory.Create(
+                sp.GetRequiredService<KonkoorHelp.Api.Services.Integrations.IWebhookSocketConnector>()));
         services.AddSingleton<IOptions<AiOptions>>(Options.Create(new AiOptions { DefaultProvider = "heuristic" }));
+
         services.AddSingleton<IAiProvider, NullAiProvider>();
         services.AddSingleton<IAiProvider, HeuristicAiProvider>();
         services.AddSingleton<IAiProvider, FailingAiProvider>();

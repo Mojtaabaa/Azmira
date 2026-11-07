@@ -19,7 +19,16 @@ Optional AI:
 - `appsettings.Production.json` ships with empty connection string on purpose.
 - Enable HTTPS at the proxy; set `ForwardedHeaders` is already wired.
 - Configure `Security:AllowedOrigins` for any non-same-origin browser clients.
+- Set `Integrations__WebhookProtectionKey` to a Base64 32-byte key (required in Production for new webhook secrets).
 - Health: `/health/live` (liveness), `/health/ready` (DB), `/health` (combined).
+
+### Generate a webhook protection key
+
+```powershell
+[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }) -as [byte[]])
+```
+
+Or in C#: `Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))`.
 
 ## File uploads / payload limits
 
