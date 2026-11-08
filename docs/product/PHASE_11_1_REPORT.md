@@ -38,4 +38,17 @@
 - EF InMemory CI cannot prove SQL unique-index races
 
 ## Release actions
-Documented in final agent reply: commit SHA, push, PR URL or auth blocker.
+
+| Item | Result |
+|------|--------|
+| Commit | `a09f743d03b0ca5e38707a6b661ea6ecf123d854` |
+| Push | `origin/feat/phase-11-learning-journey` @ same SHA |
+| PR | **Blocked** — `gh` not logged in / no `GH_TOKEN` |
+| Compare URL | https://github.com/Mojtaabaa/Azmira/compare/main...feat/phase-11-learning-journey?expand=1 |
+| Merge / deploy / Phase 12 | **Not performed** |
+
+### Verification commands (this gate)
+- Backend: **101 passed**
+- LearningJourneyTests: **6 passed**
+- Frontend tests: **11 passed**
+- Frontend build: **OK** (chunk-size / ineffective dynamic-import warnings only)
