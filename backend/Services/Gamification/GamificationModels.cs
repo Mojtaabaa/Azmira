@@ -51,6 +51,7 @@ public static class DomainEventTypes
     public const string AssessmentPassed = "AssessmentPassed";
     public const string MasteryImproved = "MasteryImproved";
     public const string QuestCompleted = "QuestCompleted";
+    public const string JourneyStageUnlocked = "JourneyStageUnlocked";
     public const string XpReversed = "XpReversed";
 }
 

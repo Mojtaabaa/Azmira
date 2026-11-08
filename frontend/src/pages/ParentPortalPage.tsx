@@ -1,10 +1,19 @@
 // @ts-nocheck
 import { useCallback, useEffect, useState } from 'react'
+import CapabilityGate from '../components/CapabilityGate'
 import { useAuth } from '../hooks/useAuth'
 import { request } from '../utils/api'
 import './SchoolEdition.css'
 
 export default function ParentPortalPage() {
+  return (
+    <CapabilityGate require="parent" title="پورتال والدین">
+      <ParentPortalInner />
+    </CapabilityGate>
+  )
+}
+
+function ParentPortalInner() {
   const { status, workspaces, activeWorkspaceId } = useAuth()
   const [children, setChildren] = useState([])
   const [summary, setSummary] = useState(null)
@@ -34,7 +43,7 @@ export default function ParentPortalPage() {
     return (
       <div className="school-page">
         <h1>پورتال والدین</h1>
-        <p>ابتدا به فضای مدرسه سوییچ کن.</p>
+        <p className="muted">ابتدا به فضای مدرسه سوییچ کن.</p>
       </div>
     )
   }
@@ -52,9 +61,16 @@ export default function ParentPortalPage() {
       {message ? <p className="school-ok">{message}</p> : null}
 
       <section className="school-panel">
+        <h2>خلاصه</h2>
+        <div className="school-stats">
+          <div><strong>{children.length}</strong><span>فرزند تأییدشده</span></div>
+        </div>
+      </section>
+
+      <section className="school-panel">
         <h2>درخواست ارتباط</h2>
         <div className="school-row">
-          <input value={studentUserId} onChange={(e) => setStudentUserId(e.target.value)} placeholder="studentUserId" />
+          <input value={studentUserId} onChange={(e) => setStudentUserId(e.target.value)} placeholder="شناسه دانش‌آموز" />
           <button
             type="button"
             onClick={async () => {
@@ -75,27 +91,41 @@ export default function ParentPortalPage() {
 
       <section className="school-panel">
         <h2>فرزندان تأییدشده</h2>
-        <ul className="school-list">
-          {children.length === 0 ? <li className="muted">هنوز فرزندی تأیید نشده.</li> : null}
-          {children.map((item) => (
-            <li key={item.studentUserId}>
-              <strong>{item.displayName}</strong>
-              <button
-                type="button"
-                onClick={async () => {
-                  setSummary(await request('GET', `/parent/children/${item.studentUserId}/summary`))
-                }}
-              >
-                خلاصه
-              </button>
-            </li>
-          ))}
-        </ul>
+        {children.length === 0 ? <p className="muted">هنوز فرزندی تأیید نشده.</p> : null}
+        <div className="school-table-wrap">
+          <table className="school-table">
+            <thead>
+              <tr>
+                <th>نام</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {children.map((item) => (
+                <tr key={item.studentUserId}>
+                  <td>{item.displayName}</td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setSummary(await request('GET', `/parent/children/${item.studentUserId}/summary`))
+                      }}
+                    >
+                      خلاصه
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {summary ? (
-          <>
-            <p className="muted">readOnly: {String(summary.readOnly)}</p>
-            <pre className="school-facts">{JSON.stringify(summary, null, 2)}</pre>
-          </>
+          <div className="school-stats school-stats-secondary">
+            <div><strong>{summary.xp ?? summary.totalXp ?? '—'}</strong><span>XP</span></div>
+            <div><strong>{summary.streak ?? summary.streakCurrent ?? '—'}</strong><span>استریک</span></div>
+            <div><strong>{summary.level ?? '—'}</strong><span>سطح</span></div>
+            <div><strong>{String(summary.readOnly ?? true)}</strong><span>فقط‌خواندنی</span></div>
+          </div>
         ) : null}
       </section>
     </div>

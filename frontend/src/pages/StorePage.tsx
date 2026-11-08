@@ -1,32 +1,10 @@
 // @ts-nocheck
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import AvatarPortrait from '../avatar/AvatarPortrait'
+import { readLocalPrototype, writeLocalPrototype } from '../avatar/assets'
 import { useAuth } from '../hooks/useAuth'
 import { request } from '../utils/api'
 import './SocialGamification.css'
-
-function AvatarPreview({ loadout, inventory }) {
-  const byId = useMemo(() => Object.fromEntries((inventory || []).map((item) => [item.itemId, item])), [inventory])
-  const layers = [
-    loadout?.backgroundItemId,
-    loadout?.baseItemId,
-    loadout?.clothingItemId,
-    loadout?.accessoryItemId,
-    loadout?.frameItemId,
-  ]
-    .map((id) => (id ? byId[id] : null))
-    .filter(Boolean)
-
-  return (
-    <div className="avatar-stage" aria-label="پیش‌نمایش آواتار">
-      <div className="avatar-stack">
-        {layers.length === 0 ? <div className="avatar-layer avatar-base avatar-base-circle" /> : null}
-        {layers.map((layer) => (
-          <div key={layer.itemId} className={`avatar-layer ${layer.cssClass || ''}`} title={layer.title} />
-        ))}
-      </div>
-    </div>
-  )
-}
 
 export default function StorePage() {
   const { status } = useAuth()
@@ -36,8 +14,14 @@ export default function StorePage() {
   const [coins, setCoins] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [localAppearance, setLocalAppearance] = useState(() => readLocalPrototype())
 
   const ownedIds = useMemo(() => new Set((inventory || []).map((item) => item.itemId)), [inventory])
+
+  function applyLocalPrototype(partial) {
+    const next = writeLocalPrototype(partial)
+    setLocalAppearance(next)
+  }
 
   const load = useCallback(async () => {
     try {
@@ -94,7 +78,22 @@ export default function StorePage() {
           <h1>فروشگاه سکه</h1>
           <p className="social-sub">فقط با سکه خرید کن — XP قابل خرج نیست. موجودی: {coins ?? '…'} سکه</p>
         </div>
-        <AvatarPreview loadout={loadout} inventory={inventory} />
+        <div className="store-avatar-panel">
+          <AvatarPortrait
+            size="lg"
+            loadout={loadout}
+            inventory={inventory}
+            localOverrides={localAppearance}
+          />
+          <div className="store-avatar-prototype" role="group" aria-label="پروتوتایپ ظاهری محلی">
+            <p className="muted">تنظیم ظاهری محلی (هنوز روی سرور ذخیره نمی‌شود)</p>
+            <div className="store-avatar-prototype__actions">
+              <button type="button" className="button button-secondary" disabled={busy} onClick={() => applyLocalPrototype({ accessory: 'glasses' })}>عینک</button>
+              <button type="button" className="button button-secondary" disabled={busy} onClick={() => applyLocalPrototype({ companion: 'owl' })}>جغد</button>
+              <button type="button" className="button button-secondary" disabled={busy} onClick={() => applyLocalPrototype({ hairStyle: 'bun', accessory: 'none', companion: 'none' })}>بازنشانی ظاهری</button>
+            </div>
+          </div>
+        </div>
       </header>
 
       {error ? <p className="social-error">{error}</p> : null}

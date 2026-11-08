@@ -99,12 +99,74 @@ const ICONS = {
       <circle cx="18" cy="12" r="1.4" />
     </>
   ),
+  review: (
+    <>
+      <path d="M5 7h10" />
+      <path d="M5 12h14" />
+      <path d="M5 17h8" />
+      <path d="M17 5l2 2-5 5" />
+    </>
+  ),
+  mastery: (
+    <>
+      <path d="M12 3 15 9l6 .5-4.5 4 1.5 6.5L12 16.5 6 20l1.5-6.5L3 9.5 9 9z" />
+    </>
+  ),
+  coach: (
+    <>
+      <circle cx="12" cy="9" r="4" />
+      <path d="M5 20c1.5-3.5 4-5 7-5s5.5 1.5 7 5" />
+      <path d="M16 4.5 18 3" />
+    </>
+  ),
+  trophy: (
+    <>
+      <path d="M8 5h8v3a4 4 0 0 1-8 0V5z" />
+      <path d="M8 6H5.5A2.5 2.5 0 0 0 8 8.5" />
+      <path d="M16 6h2.5A2.5 2.5 0 0 1 16 8.5" />
+      <path d="M10 14h4v3H10z" />
+      <path d="M8 20h8" />
+    </>
+  ),
+  avatar: (
+    <>
+      <circle cx="12" cy="9" r="3.5" />
+      <path d="M5.5 19c1.2-3 3.5-4.5 6.5-4.5s5.3 1.5 6.5 4.5" />
+    </>
+  ),
+  'pillar-plan': (
+    <>
+      <rect x="4" y="5" width="16" height="15" rx="2" />
+      <path d="M8 3.5V7" />
+      <path d="M16 3.5V7" />
+      <path d="M4 10h16" />
+      <path d="M9 14h6" />
+    </>
+  ),
+  'pillar-learn': (
+    <>
+      <path d="M4 7.5 12 4l8 3.5v9L12 20l-8-3.5z" />
+      <path d="M12 4v16" />
+    </>
+  ),
+  'pillar-improve': (
+    <>
+      <path d="M5 17 10 10l4 3 5-8" />
+      <path d="M15 5h4v4" />
+    </>
+  ),
+  'pillar-achieve': (
+    <>
+      <circle cx="12" cy="12" r="7" />
+      <path d="M12 8.5v4l2.5 1.5" />
+    </>
+  ),
 }
 
 export default function NavIcon({ name }) {
   return (
-    <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
-      {ICONS[name]}
+    <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      {ICONS[name] || ICONS.home}
     </svg>
   )
 }

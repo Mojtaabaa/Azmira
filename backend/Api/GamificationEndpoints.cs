@@ -94,6 +94,20 @@ public static class GamificationEndpoints
             }
         });
 
+        group.MapGet("/missions/daily", async (HttpContext http, DailyMissionService missions, CancellationToken cancellationToken) =>
+        {
+            if (WorkspaceAccess.RequireWorkspace(http) is { } denied) return denied;
+            var ws = WorkspaceAccess.Workspace(http);
+            return Results.Json(await missions.GetTodayAsync(ws.WorkspaceId, ws.UserId, cancellationToken));
+        });
+
+        group.MapPost("/missions/daily/sync", async (HttpContext http, DailyMissionService missions, CancellationToken cancellationToken) =>
+        {
+            if (WorkspaceAccess.RequireWorkspace(http) is { } denied) return denied;
+            var ws = WorkspaceAccess.Workspace(http);
+            return Results.Json(await missions.SyncAsync(ws.WorkspaceId, ws.UserId, cancellationToken));
+        });
+
         group.MapGet("/achievements", async (HttpContext http, AppDbContext db, GamificationProfileService profiles, CancellationToken cancellationToken) =>
         {
             if (WorkspaceAccess.RequireWorkspace(http) is { } denied) return denied;

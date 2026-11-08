@@ -1,5 +1,7 @@
 using System.Text.Json;
 using KonkoorHelp.Api.Data;
+using KonkoorHelp.Api.Services;
+using KonkoorHelp.Api.Services.Gamification;
 using KonkoorHelp.Api.Services.Schools;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,22 +11,60 @@ public static class SchoolEndpoints
 {
     public static RouteGroupBuilder MapSchoolEdition(this RouteGroupBuilder group)
     {
-        group.MapPost("/schools", async (HttpContext http, SchoolService schools, CancellationToken cancellationToken) =>
+        // Direct school create is platform-admin only (also available under /platform/schools).
+        group.MapPost("/schools", async (HttpContext http, AppDbContext db, SchoolService schools, CancellationToken cancellationToken) =>
         {
-            if (WorkspaceAccess.RequireUser(http) is { } denied) return denied;
-            var user = WorkspaceAccess.User(http);
+            if (await PlatformEndpoints.RequirePlatformAdmin(http, db, cancellationToken) is { } denied) return denied;
             var body = await JsonDocumentSafe.Read(http, cancellationToken);
+            var ownerUserId = WorkspaceAccess.User(http).Id;
+            if (body is not null && body.RootElement.TryGetProperty("ownerUserId", out var ownerEl) && ownerEl.TryGetInt32(out var explicitOwner))
+                ownerUserId = explicitOwner;
             var name = ReadString(body, "name") ?? "";
             var city = ReadString(body, "city");
             var description = ReadString(body, "description");
             try
             {
-                return Results.Json(await schools.RegisterAsync(user.Id, name, city, description, cancellationToken));
+                var created = await schools.RegisterAsync(ownerUserId, name, city, description, cancellationToken);
+                return Results.Json(new
+                {
+                    schoolId = created.SchoolId,
+                    workspaceId = created.WorkspaceId,
+                    name = created.Name,
+                    slug = created.Slug,
+                    academicYearId = created.AcademicYearId,
+                });
             }
             catch (InvalidOperationException error)
             {
                 return Results.Json(new { error = error.Message }, statusCode: 400);
             }
+        });
+
+        group.MapPost("/schools/requests", async (HttpContext http, SchoolRegistrationService registrations, CancellationToken cancellationToken) =>
+        {
+            if (WorkspaceAccess.RequireUser(http) is { } denied) return denied;
+            var user = WorkspaceAccess.User(http);
+            var body = await JsonDocumentSafe.Read(http, cancellationToken);
+            try
+            {
+                return Results.Json(await registrations.CreateRequestAsync(
+                    user.Id,
+                    ReadString(body, "name") ?? "",
+                    ReadString(body, "city"),
+                    ReadString(body, "description"),
+                    cancellationToken));
+            }
+            catch (InvalidOperationException error)
+            {
+                return Results.Json(new { error = error.Message }, statusCode: 400);
+            }
+        });
+
+        group.MapGet("/schools/requests/mine", async (HttpContext http, SchoolRegistrationService registrations, CancellationToken cancellationToken) =>
+        {
+            if (WorkspaceAccess.RequireUser(http) is { } denied) return denied;
+            var user = WorkspaceAccess.User(http);
+            return Results.Json(await registrations.ListMineAsync(user.Id, cancellationToken));
         });
 
         group.MapGet("/schools/me", async (HttpContext http, SchoolService schools, CancellationToken cancellationToken) =>
@@ -323,6 +363,36 @@ public static class SchoolEndpoints
             }
         });
 
+        group.MapPost("/teacher/missions/{id:guid}/confirm", async (
+            HttpContext http,
+            Guid id,
+            QuestEngine quests,
+            SchoolAccess access,
+            CancellationToken cancellationToken) =>
+        {
+            if (await RequireTeacher(http, cancellationToken) is { } denied) return denied;
+            var ws = WorkspaceAccess.Workspace(http);
+            var body = await JsonDocumentSafe.Read(http, cancellationToken);
+            if (body is null || !body.RootElement.TryGetProperty("studentUserId", out var s) || !s.TryGetInt32(out var studentId))
+                return Results.Json(new { error = "studentUserId لازم است." }, statusCode: 400);
+            try
+            {
+                await access.EnsureTeacherCanAccessStudentAsync(ws.WorkspaceId, ws.UserId, ws.Role, studentId, cancellationToken);
+                await quests.ConfirmManualAsync(
+                    ws.WorkspaceId,
+                    studentId,
+                    id,
+                    ws.UserId,
+                    ReadString(body, "note"),
+                    cancellationToken);
+                return Results.Json(new { ok = true });
+            }
+            catch (Exception error) when (error is InvalidOperationException or UnauthorizedAccessException)
+            {
+                return Results.Json(new { error = error.Message }, statusCode: error is UnauthorizedAccessException ? 403 : 400);
+            }
+        });
+
         group.MapGet("/teacher/classes/{id:guid}/activity", async (HttpContext http, Guid id, TeacherPortalService teacher, CancellationToken cancellationToken) =>
         {
             if (await RequireTeacher(http, cancellationToken) is { } denied) return denied;
@@ -468,15 +538,16 @@ public static class SchoolEndpoints
         return null;
     }
 
-    private static Task<IResult?> RequireAdmin(HttpContext http, CancellationToken cancellationToken)
+    private static async Task<IResult?> RequireAdmin(HttpContext http, CancellationToken cancellationToken)
     {
-        _ = cancellationToken;
-        if (RequireSchool(http) is { } denied) return Task.FromResult<IResult?>(denied);
+        if (RequireSchool(http) is { } denied) return denied;
         var ws = WorkspaceAccess.Workspace(http);
         if (SchoolAccess.IsAdmin(ws.Role) || ws.Role == WorkspaceMemberRole.AcademicManager)
-            return Task.FromResult<IResult?>(null);
-        // Platform admin via user flag checked loosely: allow SchoolOwner/Admin already
-        return Task.FromResult<IResult?>(Results.Json(new { error = "دسترسی مدیریتی مدرسه لازم است." }, statusCode: 403));
+            return null;
+        var db = http.RequestServices.GetRequiredService<AppDbContext>();
+        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(item => item.Id == ws.UserId, cancellationToken);
+        if (PlatformRoles.IsAdministrator(user)) return null;
+        return Results.Json(new { error = "دسترسی مدیریتی مدرسه لازم است." }, statusCode: 403);
     }
 
     private static async Task<IResult?> RequireTeacher(HttpContext http, CancellationToken cancellationToken)
@@ -486,7 +557,7 @@ public static class SchoolEndpoints
         if (SchoolAccess.IsTeacherOrAbove(ws.Role)) return null;
         var db = http.RequestServices.GetRequiredService<AppDbContext>();
         var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(item => item.Id == ws.UserId, cancellationToken);
-        if (user?.PlatformRole == 100) return null;
+        if (PlatformRoles.IsAdministrator(user)) return null;
         return Results.Json(new { error = "دسترسی معلم/مدیر لازم است." }, statusCode: 403);
     }
 

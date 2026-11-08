@@ -272,7 +272,7 @@ public class WebhookDnsRebindingTests
         HttpMessageHandler? deliveryHandler = null)
     {
         var services = new ServiceCollection();
-        services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(Guid.NewGuid().ToString("N")));
+        services.AddDbContext<AppDbContext>(options => TestDbOptions.UseInMemory(options, Guid.NewGuid().ToString("N")));
         services.AddSingleton<IHostEnvironment>(new TestHostEnvironment());
         services.AddSingleton(Options.Create(new IntegrationsOptions
         {

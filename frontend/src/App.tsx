@@ -30,9 +30,25 @@ const SchoolAdminPage = lazy(() => import('./pages/SchoolAdminPage'))
 const TeacherPortalPage = lazy(() => import('./pages/TeacherPortalPage'))
 const ParentPortalPage = lazy(() => import('./pages/ParentPortalPage'))
 const SchoolAnalyticsPage = lazy(() => import('./pages/SchoolAnalyticsPage'))
+const PlatformAdminPage = lazy(() => import('./pages/PlatformAdminPage'))
+const PillarHubPage = lazy(() => import('./pages/PillarHubPage'))
+const DailyMissionsPage = lazy(() => import('./pages/DailyMissionsPage'))
+const LearningJourneyPage = lazy(() => import('./pages/LearningJourneyPage'))
 
 function PageFallback() {
   return <p className="page-fallback">در حال باز شدن…</p>
+}
+
+function LearnHub() {
+  return <PillarHubPage pillarId="learn" />
+}
+
+function ImproveHub() {
+  return <PillarHubPage pillarId="improve" />
+}
+
+function AchieveHub() {
+  return <PillarHubPage pillarId="achieve" />
 }
 
 export default function App() {
@@ -43,6 +59,11 @@ export default function App() {
           <Routes>
             <Route element={<Layout />}>
               <Route index element={<DashboardPage />} />
+              <Route path="learn" element={<Suspense fallback={<PageFallback />}><LearnHub /></Suspense>} />
+              <Route path="improve" element={<Suspense fallback={<PageFallback />}><ImproveHub /></Suspense>} />
+              <Route path="achieve" element={<Suspense fallback={<PageFallback />}><AchieveHub /></Suspense>} />
+              <Route path="missions" element={<Suspense fallback={<PageFallback />}><DailyMissionsPage /></Suspense>} />
+              <Route path="journey" element={<Suspense fallback={<PageFallback />}><LearningJourneyPage /></Suspense>} />
               <Route path="timer" element={<TimerPage />} />
               <Route path="tests" element={<Suspense fallback={<PageFallback />}><TestsPage /></Suspense>} />
               <Route path="mistakes" element={<Suspense fallback={<PageFallback />}><MistakesPage /></Suspense>} />
@@ -56,6 +77,7 @@ export default function App() {
               <Route path="mastery" element={<Suspense fallback={<PageFallback />}><MasteryPage /></Suspense>} />
               <Route path="reviews" element={<Suspense fallback={<PageFallback />}><ReviewsPage /></Suspense>} />
               <Route path="ai-coach" element={<Suspense fallback={<PageFallback />}><AiCoachPage /></Suspense>} />
+              <Route path="platform" element={<Suspense fallback={<PageFallback />}><PlatformAdminPage /></Suspense>} />
               <Route path="school" element={<Suspense fallback={<PageFallback />}><SchoolAdminPage /></Suspense>} />
               <Route path="teacher" element={<Suspense fallback={<PageFallback />}><TeacherPortalPage /></Suspense>} />
               <Route path="parent" element={<Suspense fallback={<PageFallback />}><ParentPortalPage /></Suspense>} />

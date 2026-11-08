@@ -1,3 +1,96 @@
+.learner-home__welcome {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px 20px;
+  align-items: start;
+}
+
+.learner-home__welcome .dash-quick-stats {
+  grid-column: 1 / -1;
+}
+
+.learner-home__welcome-copy h1 {
+  margin: 0 0 6px;
+  font-size: var(--text-2xl, 1.65rem);
+}
+
+.learner-home__level {
+  margin: 8px 0 0;
+  font-weight: 700;
+  color: var(--pillar-achieve);
+}
+
+.learner-home__muted {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.learner-home__error {
+  margin: 8px 0 0;
+  color: var(--danger);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.learner-home__note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.55;
+}
+
+.learner-home__row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.learner-home__stats-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.learner-home__achieve {
+  display: grid;
+  gap: 12px;
+}
+
+.learner-home__xp {
+  margin: 4px 0 10px;
+  font-size: var(--text-lg, 1.125rem);
+  font-weight: 700;
+}
+
+.learner-home__improve-ready {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+
+.learner-home__missions-strip ul {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.learner-home__missions-strip li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--text-sm, 0.875rem);
+}
+
+@media (max-width: 720px) {
+  .learner-home__welcome {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+}
+
 .dash-welcome {
   display: flex;
   align-items: flex-start;

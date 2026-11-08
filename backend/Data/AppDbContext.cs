@@ -69,10 +69,15 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<SchoolAssignmentSubmission> SchoolAssignmentSubmissions => Set<SchoolAssignmentSubmission>();
     public DbSet<TeacherFeedback> TeacherFeedback => Set<TeacherFeedback>();
     public DbSet<SchoolSettingsExtras> SchoolSettingsExtras => Set<SchoolSettingsExtras>();
+    public DbSet<SchoolRegistrationRequest> SchoolRegistrationRequests => Set<SchoolRegistrationRequest>();
     public DbSet<ApiClient> ApiClients => Set<ApiClient>();
     public DbSet<ApiClientWorkspace> ApiClientWorkspaces => Set<ApiClientWorkspace>();
     public DbSet<WebhookEndpoint> WebhookEndpoints => Set<WebhookEndpoint>();
     public DbSet<WebhookDelivery> WebhookDeliveries => Set<WebhookDelivery>();
+    public DbSet<JourneyDefinition> JourneyDefinitions => Set<JourneyDefinition>();
+    public DbSet<JourneyRegion> JourneyRegions => Set<JourneyRegion>();
+    public DbSet<JourneyStage> JourneyStages => Set<JourneyStage>();
+    public DbSet<LearnerJourneyProgress> LearnerJourneyProgress => Set<LearnerJourneyProgress>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -749,6 +754,18 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasIndex(item => new { item.WorkspaceId, item.StudentUserId, item.CreatedAt });
         });
 
+        modelBuilder.Entity<SchoolRegistrationRequest>(entity =>
+        {
+            entity.ToTable("SchoolRegistrationRequests");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Name).HasMaxLength(160).IsRequired();
+            entity.Property(item => item.City).HasMaxLength(80).IsRequired();
+            entity.Property(item => item.Description).HasMaxLength(800).IsRequired();
+            entity.Property(item => item.Notes).HasMaxLength(500).IsRequired();
+            entity.HasIndex(item => new { item.Status, item.CreatedAt });
+            entity.HasIndex(item => new { item.RequesterUserId, item.Status });
+        });
+
         modelBuilder.Entity<SchoolSettingsExtras>(entity =>
         {
             entity.ToTable("SchoolSettingsExtras");
@@ -796,6 +813,50 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasIndex(item => new { item.Status, item.NextAttemptAt });
             entity.HasIndex(item => new { item.WorkspaceId, item.CreatedAt });
             entity.HasOne(item => item.Endpoint).WithMany().HasForeignKey(item => item.WebhookEndpointId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<JourneyDefinition>(entity =>
+        {
+            entity.ToTable("JourneyDefinitions");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Code).HasMaxLength(120).IsRequired();
+            entity.Property(item => item.Title).HasMaxLength(200).IsRequired();
+            entity.Property(item => item.Locale).HasMaxLength(16).IsRequired();
+            entity.HasIndex(item => new { item.WorkspaceId, item.Code }).IsUnique();
+        });
+
+        modelBuilder.Entity<JourneyRegion>(entity =>
+        {
+            entity.ToTable("JourneyRegions");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Title).HasMaxLength(160).IsRequired();
+            entity.Property(item => item.VisualThemeKey).HasMaxLength(40).IsRequired();
+            entity.Property(item => item.SubjectKey).HasMaxLength(120).IsRequired();
+            entity.HasIndex(item => new { item.JourneyId, item.SortOrder });
+            entity.HasOne(item => item.Journey).WithMany(item => item.Regions).HasForeignKey(item => item.JourneyId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<JourneyStage>(entity =>
+        {
+            entity.ToTable("JourneyStages");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Title).HasMaxLength(160).IsRequired();
+            entity.Property(item => item.NarrativeBlurb).HasMaxLength(400);
+            entity.Property(item => item.RequirementsJson).IsRequired();
+            entity.Property(item => item.RewardsJson).IsRequired();
+            entity.HasIndex(item => new { item.RegionId, item.SortOrder });
+            entity.HasOne(item => item.Region).WithMany(item => item.Stages).HasForeignKey(item => item.RegionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LearnerJourneyProgress>(entity =>
+        {
+            entity.ToTable("LearnerJourneyProgress");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.UnlockedStageIdsJson).IsRequired();
+            entity.Property(item => item.CompletedStageIdsJson).IsRequired();
+            entity.Property(item => item.EvidenceJson).IsRequired();
+            entity.HasIndex(item => new { item.WorkspaceId, item.UserId, item.JourneyId }).IsUnique();
+            entity.HasOne(item => item.Journey).WithMany().HasForeignKey(item => item.JourneyId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

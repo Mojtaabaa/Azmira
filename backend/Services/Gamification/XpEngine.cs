@@ -8,6 +8,12 @@ public sealed class XpEngine(AppDbContext db, GamificationProfileService profile
 {
     public const string ConsumerName = "XpEngine";
 
+    /// <summary>
+    /// Process-local serialization for learner XP/coin grants. Complements SQL Serializable
+    /// transactions and EventId uniqueness; required because EF InMemory ignores isolation.
+    /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> GrantGates = new();
+
     public async Task ProcessAsync(DomainOutbox row, DomainEventEnvelope envelope, CancellationToken cancellationToken)
     {
         if (await AlreadyProcessed(row.Id, cancellationToken)) return;
@@ -121,73 +127,143 @@ public sealed class XpEngine(AppDbContext db, GamificationProfileService profile
         int dailyCap,
         CancellationToken cancellationToken)
     {
-        if (await db.XpLedger.AnyAsync(item => item.EventId == eventId && item.RuleCode == ruleCode, cancellationToken))
+        if (await db.XpLedger.AnyAsync(item => item.EventId == eventId, cancellationToken)
+            || await db.CoinLedger.AnyAsync(item => item.EventId == eventId, cancellationToken))
         {
             return;
         }
 
-        var stats = await GetOrCreateStatsAsync(workspaceId, userId, cancellationToken);
-        var awardedToday = await db.XpLedger
-            .Where(item => item.WorkspaceId == workspaceId
-                && item.UserId == userId
-                && item.Kind == LedgerKind.Earn
-                && item.CreatedAt >= DateTime.UtcNow.Date)
-            .SumAsync(item => (int?)item.Delta, cancellationToken) ?? 0;
-
-        var remaining = Math.Max(0, dailyCap - awardedToday);
-        var grantXp = Math.Min(Math.Max(0, xp), remaining);
-        if (grantXp > 0)
+        var gate = GrantGates.GetOrAdd($"{workspaceId:N}:{userId}", _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(cancellationToken);
+        try
         {
-            stats.XpTotal += grantXp;
-            db.XpLedger.Add(new XpLedger
+            await SqlConcurrency.RunWithClearAsync(db, async () =>
             {
-                Id = Guid.NewGuid(),
-                WorkspaceId = workspaceId,
-                UserId = userId,
-                EventId = eventId,
-                Delta = grantXp,
-                BalanceAfter = stats.XpTotal,
-                Reason = reason,
-                RuleCode = ruleCode,
-                Kind = LedgerKind.Earn,
-                CreatedAt = DateTime.UtcNow,
-            });
-            db.GameNotifications.Add(new GameNotification
-            {
-                Id = Guid.NewGuid(),
-                WorkspaceId = workspaceId,
-                UserId = userId,
-                Kind = GameNotificationKind.XpGained,
-                Title = "امتیاز جدید",
-                Body = $"+{grantXp} XP",
-                PayloadJson = JsonSerializer.Serialize(new { xp = grantXp, ruleCode }, GamificationJson.Options),
-                CreatedAt = DateTime.UtcNow,
-            });
-        }
-
-        if (coins > 0)
-        {
-            if (!await db.CoinLedger.AnyAsync(item => item.EventId == eventId && item.RuleCode == ruleCode, cancellationToken))
-            {
-                stats.Coins += coins;
-                db.CoinLedger.Add(new CoinLedger
+                await using var tx = await db.Database.BeginTransactionAsync(
+                    System.Data.IsolationLevel.Serializable,
+                    cancellationToken);
+                try
                 {
-                    Id = Guid.NewGuid(),
-                    WorkspaceId = workspaceId,
-                    UserId = userId,
-                    EventId = eventId,
-                    Delta = coins,
-                    BalanceAfter = stats.Coins,
-                    Reason = reason,
-                    RuleCode = ruleCode,
-                    Kind = LedgerKind.Earn,
-                    CreatedAt = DateTime.UtcNow,
-                });
-            }
-        }
+                    if (await db.XpLedger.AnyAsync(item => item.EventId == eventId, cancellationToken)
+                        || await db.CoinLedger.AnyAsync(item => item.EventId == eventId, cancellationToken))
+                    {
+                        await tx.RollbackAsync(cancellationToken);
+                        return;
+                    }
 
-        stats.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(cancellationToken);
+                    var stats = await GetOrCreateStatsAsync(workspaceId, userId, cancellationToken);
+                    // Touch stats row so SQL Server serializable/row lock serializes concurrent grants for this learner.
+                    stats.UpdatedAt = DateTime.UtcNow;
+                    await db.SaveChangesAsync(cancellationToken);
+                    var tz = string.IsNullOrWhiteSpace(stats.TimeZone)
+                        ? await profiles.ResolveTimeZoneAsync(workspaceId, cancellationToken)
+                        : stats.TimeZone;
+                    var localDay = MissionClock.ToLocalDate(DateTime.UtcNow, tz);
+                    var (dayStart, dayEnd) = MissionClock.LocalDayUtcBounds(localDay, tz);
+
+                    var awardedToday = await db.XpLedger
+                        .Where(item => item.WorkspaceId == workspaceId
+                            && item.UserId == userId
+                            && item.Kind == LedgerKind.Earn
+                            && item.CreatedAt >= dayStart
+                            && item.CreatedAt <= dayEnd)
+                        .SumAsync(item => (int?)item.Delta, cancellationToken) ?? 0;
+
+                    var remaining = Math.Max(0, dailyCap - awardedToday);
+                    var grantXp = Math.Min(Math.Max(0, xp), remaining);
+                    var now = DateTime.UtcNow;
+
+                    // Always record XP ledger for EventId idempotency (delta may be 0 when capped)
+                    stats.XpTotal += grantXp;
+                    db.XpLedger.Add(new XpLedger
+                    {
+                        Id = Guid.NewGuid(),
+                        WorkspaceId = workspaceId,
+                        UserId = userId,
+                        EventId = eventId,
+                        Delta = grantXp,
+                        BalanceAfter = stats.XpTotal,
+                        Reason = reason,
+                        RuleCode = ruleCode,
+                        Kind = LedgerKind.Earn,
+                        CreatedAt = now,
+                    });
+                    if (grantXp > 0)
+                    {
+                        db.GameNotifications.Add(new GameNotification
+                        {
+                            Id = Guid.NewGuid(),
+                            WorkspaceId = workspaceId,
+                            UserId = userId,
+                            Kind = GameNotificationKind.XpGained,
+                            Title = "امتیاز جدید",
+                            Body = $"+{grantXp} XP",
+                            PayloadJson = JsonSerializer.Serialize(new { xp = grantXp, ruleCode }, GamificationJson.Options),
+                            CreatedAt = now,
+                        });
+                    }
+
+                    if (coins > 0 && !await db.CoinLedger.AnyAsync(item => item.EventId == eventId, cancellationToken))
+                    {
+                        var grantCoins = coins;
+                        if (string.Equals(reason, "quest_reward", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(ruleCode, "quest", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var coinsToday = await db.CoinLedger
+                                .Where(item => item.WorkspaceId == workspaceId
+                                    && item.UserId == userId
+                                    && item.Kind == LedgerKind.Earn
+                                    && item.Reason == "quest_reward"
+                                    && item.CreatedAt >= dayStart
+                                    && item.CreatedAt <= dayEnd)
+                                .SumAsync(item => (int?)item.Delta, cancellationToken) ?? 0;
+                            var coinRemaining = Math.Max(0, DailyMissionCatalog.MaxDailyMissionCoins - coinsToday);
+                            grantCoins = Math.Min(coins, coinRemaining);
+                        }
+
+                        if (grantCoins > 0)
+                        {
+                            stats.Coins += grantCoins;
+                            db.CoinLedger.Add(new CoinLedger
+                            {
+                                Id = Guid.NewGuid(),
+                                WorkspaceId = workspaceId,
+                                UserId = userId,
+                                EventId = eventId,
+                                Delta = grantCoins,
+                                BalanceAfter = stats.Coins,
+                                Reason = reason,
+                                RuleCode = ruleCode,
+                                Kind = LedgerKind.Earn,
+                                CreatedAt = now,
+                            });
+                        }
+                    }
+
+                    stats.UpdatedAt = now;
+                    try
+                    {
+                        await db.SaveChangesAsync(cancellationToken);
+                        await tx.CommitAsync(cancellationToken);
+                    }
+                    catch (DbUpdateException)
+                    {
+                        await tx.RollbackAsync(cancellationToken);
+                        db.ChangeTracker.Clear();
+                        // Unique EventId lost the race — idempotent success (IX_XpLedger_EventId / CoinLedger)
+                    }
+                }
+                catch
+                {
+                    await tx.RollbackAsync(cancellationToken);
+                    throw;
+                }
+            }, cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     private static int ComputeXp(XpAwardRule rule, DomainEventEnvelope envelope)

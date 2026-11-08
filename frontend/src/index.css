@@ -55,6 +55,30 @@
   --overlay: color-mix(in srgb, var(--text) 42%, transparent);
   --orb-a: color-mix(in srgb, var(--accent) 22%, transparent);
   --orb-b: color-mix(in srgb, var(--info) 18%, transparent);
+
+  /* Phase 9 — pillar semantic accents (not separate themes) */
+  --pillar-plan: #2f6ea8;
+  --pillar-learn: #2f7a62;
+  --pillar-improve: #5b4d8a;
+  --pillar-achieve: #b7791f;
+  --panel: var(--surface-solid);
+  --radius-avatar: 18px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.65rem;
+  --motion-fast: 160ms;
+  --motion-med: 280ms;
+  --avatar-fallback-bg: var(--surface-2);
   color-scheme: light;
 }
 
@@ -110,6 +134,12 @@
   --overlay: color-mix(in srgb, #000 68%, transparent);
   --orb-a: color-mix(in srgb, var(--accent) 20%, transparent);
   --orb-b: color-mix(in srgb, var(--info) 14%, transparent);
+  --pillar-plan: #6ea0d4;
+  --pillar-learn: #5fba9a;
+  --pillar-improve: #9b8fd4;
+  --pillar-achieve: #e0b35c;
+  --panel: var(--surface-solid);
+  --avatar-fallback-bg: var(--surface-2);
   color-scheme: dark;
 }
 

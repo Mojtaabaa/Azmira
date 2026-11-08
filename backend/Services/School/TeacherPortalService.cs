@@ -181,7 +181,7 @@ public sealed class TeacherPortalService(AppDbContext db, SchoolAccess access, O
             Title = title.Trim(),
             Description = description?.Trim() ?? $"ماموریت کلاسی {classId}",
             Category = "classroom",
-            Kind = QuestKind.Special,
+            Kind = QuestKind.TeacherAssigned,
             TargetValue = Math.Max(1, targetValue),
             RewardXp = Math.Max(0, rewardXp),
             RewardCoins = Math.Max(0, rewardCoins),

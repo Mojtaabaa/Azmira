@@ -1102,6 +1102,127 @@ namespace KonkoorHelp.Api.Data.Migrations
                     b.ToTable("GuardianStudentLinks", (string)null);
                 });
 
+            modelBuilder.Entity("KonkoorHelp.Api.Data.JourneyDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsBootstrap")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Locale")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId", "Code")
+                        .IsUnique()
+                        .HasFilter("[WorkspaceId] IS NOT NULL");
+
+                    b.ToTable("JourneyDefinitions", (string)null);
+                });
+
+            modelBuilder.Entity("KonkoorHelp.Api.Data.JourneyRegion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("JourneyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SubjectKey")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("VisualThemeKey")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JourneyId", "SortOrder");
+
+                    b.ToTable("JourneyRegions", (string)null);
+                });
+
+            modelBuilder.Entity("KonkoorHelp.Api.Data.JourneyStage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("NarrativeBlurb")
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<Guid>("RegionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RequirementsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RewardsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<Guid?>("UnlockPriorStageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RegionId", "SortOrder");
+
+                    b.ToTable("JourneyStages", (string)null);
+                });
+
             modelBuilder.Entity("KonkoorHelp.Api.Data.LeaderboardDefinition", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1173,6 +1294,49 @@ namespace KonkoorHelp.Api.Data.Migrations
                     b.HasIndex("WorkspaceId", "Metric", "PeriodKey", "GeneratedAt");
 
                     b.ToTable("LeaderboardSnapshots", (string)null);
+                });
+
+            modelBuilder.Entity("KonkoorHelp.Api.Data.LearnerJourneyProgress", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CompletedStageIdsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("CurrentStageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EvidenceJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("JourneyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UnlockedStageIdsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JourneyId");
+
+                    b.HasIndex("WorkspaceId", "UserId", "JourneyId")
+                        .IsUnique();
+
+                    b.ToTable("LearnerJourneyProgress", (string)null);
                 });
 
             modelBuilder.Entity("KonkoorHelp.Api.Data.MasteryNode", b =>
@@ -1597,6 +1761,65 @@ namespace KonkoorHelp.Api.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("SchoolAssignmentSubmissions", (string)null);
+                });
+
+            modelBuilder.Entity("KonkoorHelp.Api.Data.SchoolRegistrationRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedSchoolId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CreatedWorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(800)
+                        .HasColumnType("nvarchar(800)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("RequesterUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewerUserId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequesterUserId", "Status");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("SchoolRegistrationRequests", (string)null);
                 });
 
             modelBuilder.Entity("KonkoorHelp.Api.Data.SchoolSettingsExtras", b =>
@@ -2918,6 +3141,39 @@ namespace KonkoorHelp.Api.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("KonkoorHelp.Api.Data.JourneyRegion", b =>
+                {
+                    b.HasOne("KonkoorHelp.Api.Data.JourneyDefinition", "Journey")
+                        .WithMany("Regions")
+                        .HasForeignKey("JourneyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Journey");
+                });
+
+            modelBuilder.Entity("KonkoorHelp.Api.Data.JourneyStage", b =>
+                {
+                    b.HasOne("KonkoorHelp.Api.Data.JourneyRegion", "Region")
+                        .WithMany("Stages")
+                        .HasForeignKey("RegionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Region");
+                });
+
+            modelBuilder.Entity("KonkoorHelp.Api.Data.LearnerJourneyProgress", b =>
+                {
+                    b.HasOne("KonkoorHelp.Api.Data.JourneyDefinition", "Journey")
+                        .WithMany()
+                        .HasForeignKey("JourneyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Journey");
+                });
+
             modelBuilder.Entity("KonkoorHelp.Api.Data.NoteDocument", b =>
                 {
                     b.HasOne("KonkoorHelp.Api.Data.UserAccount", "User")
@@ -3148,6 +3404,16 @@ namespace KonkoorHelp.Api.Data.Migrations
             modelBuilder.Entity("KonkoorHelp.Api.Data.ClassGroup", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("KonkoorHelp.Api.Data.JourneyDefinition", b =>
+                {
+                    b.Navigation("Regions");
+                });
+
+            modelBuilder.Entity("KonkoorHelp.Api.Data.JourneyRegion", b =>
+                {
+                    b.Navigation("Stages");
                 });
 
             modelBuilder.Entity("KonkoorHelp.Api.Data.Team", b =>

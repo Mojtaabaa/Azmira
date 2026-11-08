@@ -11,7 +11,7 @@ public class GamificationEngineTests
     {
         var databaseName = Guid.NewGuid().ToString("N");
         var services = new ServiceCollection();
-        services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(databaseName));
+        services.AddDbContext<AppDbContext>(options => TestDbOptions.UseInMemory(options, databaseName));
         services.AddScoped<OutboxPublisher>();
         services.AddScoped<GamificationProfileService>();
         services.AddScoped<XpEngine>();
