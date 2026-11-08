@@ -6,12 +6,14 @@ using KonkoorHelp.Api.Services.Gamification;
 using KonkoorHelp.Api.Services.Integrations;
 using KonkoorHelp.Api.Services.Learning;
 using KonkoorHelp.Api.Services.Learning.Ai;
+using KonkoorHelp.Api.Services.Sandbox;
 using KonkoorHelp.Api.Services.Schools;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddRotbehSandboxConfiguration();
 
 builder.WebHost.ConfigureKestrel(options =>
 {

@@ -19,6 +19,11 @@ publish
 dist-ssr
 *.local
 
+# Operator-owned sandbox secrets (templates/defaults stay tracked)
+sandbox/appsettings.json
+sandbox/local/
+sandbox/secrets/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
