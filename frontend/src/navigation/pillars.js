@@ -57,6 +57,7 @@ export const NAV_GROUPS = [
     labelEn: 'LEARN',
     items: [
       { to: '/learn', label: 'مرکز یادگیری', short: 'یادگیری', icon: 'pillar-learn', end: true },
+      { to: '/journey', label: 'نقشه سفر', short: 'سفر', icon: 'mastery' },
       { to: '/topics', label: 'مباحث', short: 'مبحث', icon: 'topics' },
       { to: '/assessments', label: 'ارزیابی', short: 'ارزیابی', icon: 'tests' },
       { to: '/tests', label: 'آزمون‌ها', short: 'آزمون', icon: 'tests' },

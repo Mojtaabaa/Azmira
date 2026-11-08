@@ -1,0 +1,141 @@
+// @ts-nocheck
+import { useCallback, useEffect, useState } from 'react'
+import { useAuth } from '../hooks/useAuth'
+import { request } from '../utils/api'
+import EmptyState from '../components/ui/EmptyState'
+import './LearningJourneyPage.css'
+
+export default function LearningJourneyPage() {
+  const { status } = useAuth()
+  const [data, setData] = useState(null)
+  const [selected, setSelected] = useState(null)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const load = useCallback(async () => {
+    setError('')
+    try {
+      setData(await request('GET', '/journey/me'))
+    } catch (err) {
+      setError(err?.message || 'خطا')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (status === 'authed') void load()
+  }, [status, load])
+
+  async function evaluate() {
+    setBusy(true)
+    setError('')
+    try {
+      const body = await request('POST', '/journey/evaluate-unlock', {})
+      setData(body.map)
+    } catch (err) {
+      setError(err?.message || 'خطا')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!data && !error) {
+    return <p className="page-fallback">در حال بارگذاری نقشه سفر…</p>
+  }
+
+  return (
+    <div className="page journey-page">
+      <header className="page-header journey-page__header">
+        <p className="journey-page__en">LEARN · Journey</p>
+        <h1>{data?.title || 'سفر یادگیری'}</h1>
+        <p>
+          مسیر منطقه‌ای با ایستگاه‌هایی که فقط با شواهد یادگیری باز می‌شوند — نه با XP یا دقیقه مطالعهٔ خام.
+        </p>
+        <div className="journey-page__actions">
+          <button type="button" className="btn primary" disabled={busy} onClick={evaluate}>
+            {busy ? 'در حال ارزیابی…' : 'ارزیابی شواهد و آنلاک'}
+          </button>
+        </div>
+        {data?.unlockPolicy ? <p className="journey-page__policy">{data.unlockPolicy}</p> : null}
+      </header>
+
+      {error ? <p className="form-error">{error}</p> : null}
+
+      {!data?.regions?.length ? (
+        <EmptyState
+          pillar="learn"
+          title="هنوز نقشه‌ای ساخته نشده"
+          description="با ثبت تسلط یا کارت مرور، سفر از موضوعات واقعی‌ات bootstrap می‌شود."
+        />
+      ) : (
+        <div className="journey-map" role="list">
+          {data.regions.map((region) => (
+            <section key={region.id} className={`journey-region journey-region--${region.visualThemeKey}`} role="listitem">
+              <header className="journey-region__head">
+                <h2>{region.title}</h2>
+                <span>{region.subjectKey}</span>
+              </header>
+              <ol className="journey-path">
+                {region.stages.map((stage, index) => (
+                  <li key={stage.id} className={`journey-node journey-node--${stage.state}`}>
+                    {index > 0 ? <span className="journey-node__link" aria-hidden="true" /> : null}
+                    <button
+                      type="button"
+                      className="journey-node__btn"
+                      onClick={() => setSelected(stage)}
+                      aria-pressed={selected?.id === stage.id}
+                    >
+                      <span className="journey-node__dot" />
+                      <strong>{stage.title}</strong>
+                      <em>{labelState(stage.state)}</em>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ))}
+        </div>
+      )}
+
+      {selected ? (
+        <aside className="journey-drawer" aria-label="کشوی شواهد">
+          <header>
+            <h3>{selected.title}</h3>
+            <button type="button" className="btn ghost" onClick={() => setSelected(null)}>
+              بستن
+            </button>
+          </header>
+          <p>{selected.narrativeBlurb}</p>
+          <h4>چرا باز شد؟</h4>
+          {selected.evidence?.length ? (
+            <ul className="journey-evidence">
+              {selected.evidence.map((ev) => (
+                <li key={`${ev.type}-${ev.refId}`}>
+                  <strong>{ev.type}</strong>
+                  <span>{ev.detail}</span>
+                  <code>{ev.refId.slice(0, 8)}</code>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">
+              {selected.state === 'locked'
+                ? 'هنوز شواهد کافی ثبت نشده. تسلط، آزمون یا مرور موفق لازم است.'
+                : 'شواهدی برای این ایستگاه ذخیره نشده.'}
+            </p>
+          )}
+          {selected.rewards?.cosmeticKey ? (
+            <p className="journey-cosmetic">
+              هوک ظاهری دستاورد: <code>{selected.rewards.cosmeticKey}</code>
+            </p>
+          ) : null}
+        </aside>
+      ) : null}
+    </div>
+  )
+}
+
+function labelState(state) {
+  if (state === 'complete') return 'تمام'
+  if (state === 'available') return 'باز'
+  return 'قفل'
+}
