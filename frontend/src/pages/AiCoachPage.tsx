@@ -1,8 +1,84 @@
 // @ts-nocheck
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import EmptyState from '../components/ui/EmptyState'
 import { useAuth } from '../hooks/useAuth'
 import { request } from '../utils/api'
 import './LearningIntelligence.css'
+
+const PROMPTS = [
+  'کدام مبحث را این هفته اولویت بدهم؟',
+  'بر اساس بازبینی‌های عقب‌افتاده چه کنم؟',
+  'یک برنامه ۹۰ دقیقه‌ای برای امروز پیشنهاد بده',
+]
+
+function FactCards({ facts }) {
+  if (!facts) return null
+  if (Array.isArray(facts)) {
+    return (
+      <ul className="coach-cards">
+        {facts.map((item, index) => (
+          <li key={index} className="coach-card">
+            {typeof item === 'string' ? item : <FactObject value={item} />}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  if (typeof facts === 'object') {
+    return (
+      <ul className="coach-cards">
+        {Object.entries(facts).map(([key, value]) => (
+          <li key={key} className="coach-card">
+            <strong>{key}</strong>
+            <FactObject value={value} />
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  return <p>{String(facts)}</p>
+}
+
+function FactObject({ value }) {
+  if (value == null) return <span>—</span>
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return <span>{String(value)}</span>
+  }
+  if (Array.isArray(value)) {
+    return (
+      <ul className="coach-card__list">
+        {value.map((item, index) => (
+          <li key={index}>{typeof item === 'object' ? JSON.stringify(item) : String(item)}</li>
+        ))}
+      </ul>
+    )
+  }
+  return (
+    <ul className="coach-card__list">
+      {Object.entries(value).map(([k, v]) => (
+        <li key={k}>
+          <em>{k}:</em> {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function EvidenceList({ refs }) {
+  if (!refs?.length) return null
+  return (
+    <ul className="coach-evidence">
+      {refs.map((ref, index) => (
+        <li key={`${ref.type || 'ev'}-${ref.refId || index}`}>
+          <strong>{ref.type || 'evidence'}</strong>
+          {ref.detail ? <span>{ref.detail}</span> : null}
+          {ref.refId ? <code>{String(ref.refId).slice(0, 8)}</code> : null}
+        </li>
+      ))}
+    </ul>
+  )
+}
 
 export default function AiCoachPage() {
   const { status, user, workspaces, activeWorkspaceId } = useAuth()
@@ -86,10 +162,9 @@ export default function AiCoachPage() {
     }
   }
 
-  async function sendChat(event) {
-    event.preventDefault()
-    if (!chatInput.trim()) return
-    const userText = chatInput.trim()
+  async function sendChat(text) {
+    const userText = String(text || '').trim()
+    if (!userText) return
     setChatInput('')
     setChatTurns((prev) => [...prev, { role: 'user', content: userText }])
     setBusy(true)
@@ -122,7 +197,7 @@ export default function AiCoachPage() {
       <header className="learn-hero">
         <div>
           <p className="learn-kicker">مربی هوشمند</p>
-          <h1>AI Coach</h1>
+          <h1>مربی یادگیری</h1>
           <p className="learn-sub">فقط داده مجاز فضای کاری · پیشنهادها نیازمند تأیید · حقایق از AI جدا هستند.</p>
         </div>
       </header>
@@ -164,30 +239,49 @@ export default function AiCoachPage() {
         </section>
       ) : null}
 
-      <section className="learn-panel">
+      <section className="learn-panel coach-chat">
         <h2>گفتگو با مربی</h2>
-        <p className="learn-note">هر پاسخ با confidence و evidenceRefs می‌آید؛ بدون کلید LLM هم مسیر heuristic فعال است.</p>
-        <ul className="learn-list">
-          {chatTurns.map((turn, index) => (
-            <li key={`${turn.role}-${index}`}>
-              <div>
-                <strong>{turn.role === 'user' ? 'تو' : 'مربی'}</strong>
-                <span>{turn.content}</span>
-                {turn.confidence ? (
-                  <span className="muted">
-                    {' '}
-                    · سطح شواهد: {turn.confidence} (نه قطعیت)
-                    {turn.provider ? ` · ${turn.provider}` : ''}
-                  </span>
-                ) : null}
-                {turn.evidenceRefs?.length ? (
-                  <pre className="facts-box">{JSON.stringify(turn.evidenceRefs, null, 2)}</pre>
-                ) : null}
-              </div>
-            </li>
+        <p className="learn-note">هر پاسخ با سطح شواهد و ارجاع می‌آید؛ بدون کلید LLM هم مسیر heuristic فعال است.</p>
+        {chatTurns.length === 0 ? (
+          <EmptyState
+            pillar="improve"
+            title="هنوز گفتگویی شروع نشده"
+            description="یکی از پیشنهادهای زیر را بزن یا سوال خودت را بنویس."
+          />
+        ) : (
+          <ul className="learn-list">
+            {chatTurns.map((turn, index) => (
+              <li key={`${turn.role}-${index}`}>
+                <div>
+                  <strong>{turn.role === 'user' ? 'تو' : 'مربی'}</strong>
+                  <span>{turn.content}</span>
+                  {turn.confidence ? (
+                    <span className="muted">
+                      {' '}
+                      · سطح شواهد: {turn.confidence}
+                      {turn.provider ? ` · ${turn.provider}` : ''}
+                    </span>
+                  ) : null}
+                  <EvidenceList refs={turn.evidenceRefs} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="coach-prompts">
+          {PROMPTS.map((prompt) => (
+            <button key={prompt} type="button" className="button button-secondary" disabled={busy} onClick={() => void sendChat(prompt)}>
+              {prompt}
+            </button>
           ))}
-        </ul>
-        <form className="learn-row" onSubmit={sendChat}>
+        </div>
+        <form
+          className="learn-row coach-composer"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void sendChat(chatInput)
+          }}
+        >
           <input
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
@@ -227,8 +321,9 @@ export default function AiCoachPage() {
         <section className="learn-panel">
           <h2>تحلیل مربی</h2>
           <p className="learn-note">{analysis.note}</p>
-          <pre className="facts-box">{JSON.stringify(analysis.facts, null, 2)}</pre>
-          <p>{typeof analysis.analysis === 'string' ? analysis.analysis : JSON.stringify(analysis.analysis)}</p>
+          <h3>حقایق سروری</h3>
+          <FactCards facts={analysis.facts} />
+          <p>{typeof analysis.analysis === 'string' ? analysis.analysis : null}</p>
           <ul className="learn-list">
             {(analysis.recommendations || []).map((item) => (
               <li key={item.id}>
@@ -266,7 +361,7 @@ export default function AiCoachPage() {
         <section className="learn-panel">
           <h2>گزارش {report.periodKey}</h2>
           <p className="learn-note">{report.note || 'facts واقعی · narrative پیشنهادی AI'}</p>
-          <pre className="facts-box">{JSON.stringify(report.facts, null, 2)}</pre>
+          <FactCards facts={report.facts} />
           <p className="narrative">{report.narrative}</p>
         </section>
       ) : null}
@@ -275,7 +370,13 @@ export default function AiCoachPage() {
         <section className="learn-panel">
           <h2>{plan.title}</h2>
           <p className="learn-note">{plan.note}</p>
-          <pre className="facts-box">{JSON.stringify(plan.schedule, null, 2)}</pre>
+          <h3>برنامه پیشنهادی</h3>
+          <FactCards facts={plan.schedule} />
+          <p>
+            <Link className="text-link" to="/tasks">افزودن به کارها</Link>
+            {' · '}
+            <Link className="text-link" to="/timer">شروع تایمر</Link>
+          </p>
           <div className="learn-actions">
             <button
               type="button"

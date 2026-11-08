@@ -1,18 +1,39 @@
 // @ts-nocheck
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import EmptyState from '../components/ui/EmptyState'
+import KpiStat from '../components/ui/KpiStat'
 import Meter from '../components/ui/Meter'
 import PillarSection from '../components/ui/PillarSection'
+import StatusChip from '../components/ui/StatusChip'
 import { useAuth } from '../hooks/useAuth'
 import { request } from '../utils/api'
 import './DailyMissionsPage.css'
+
+const FILTERS = [
+  { id: 'all', label: 'همه' },
+  { id: 'active', label: 'فعال' },
+  { id: 'claimable', label: 'آماده دریافت' },
+  { id: 'done', label: 'تمام‌شده' },
+]
+
+function missionStartTo(mission) {
+  const pillar = String(mission?.pillar || '').toLowerCase()
+  const title = String(mission?.title || mission?.kind || '').toLowerCase()
+  if (pillar.includes('improve') || title.includes('بازبین') || title.includes('review')) return '/reviews'
+  if (title.includes('ارزیاب') || title.includes('assess')) return '/assessments'
+  if (title.includes('سفر') || title.includes('journey')) return '/journey'
+  if (pillar.includes('learn')) return '/timer'
+  if (pillar.includes('plan')) return '/tasks'
+  return '/timer'
+}
 
 export default function DailyMissionsPage() {
   const { status } = useAuth()
   const [payload, setPayload] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [filter, setFilter] = useState('all')
 
   const load = useCallback(async () => {
     try {
@@ -50,9 +71,24 @@ export default function DailyMissionsPage() {
     }
   }
 
-  if (!payload && !error) return <p className="page-fallback">در حال بارگذاری مأموریت‌ها…</p>
-
   const items = payload?.items || []
+  const summary = useMemo(() => {
+    const done = items.filter((m) => m.status === 'Claimed' || m.status === 'Completed').length
+    const claimable = items.filter((m) => m.status === 'Completed').length
+    const xpLeft = items
+      .filter((m) => m.status !== 'Claimed')
+      .reduce((sum, m) => sum + (Number(m.rewardXp) || 0), 0)
+    return { done, claimable, xpLeft, total: items.length }
+  }, [items])
+
+  const visible = useMemo(() => {
+    if (filter === 'active') return items.filter((m) => m.status === 'Active' || m.status === 'InProgress')
+    if (filter === 'claimable') return items.filter((m) => m.status === 'Completed')
+    if (filter === 'done') return items.filter((m) => m.status === 'Claimed' || m.status === 'Expired')
+    return items
+  }, [items, filter])
+
+  if (!payload && !error) return <p className="page-fallback">در حال بارگذاری مأموریت‌ها…</p>
 
   return (
     <div className="page daily-missions">
@@ -62,9 +98,14 @@ export default function DailyMissionsPage() {
         <p>
           تاریخ محلی {payload?.localDate || '—'} · منطقه زمانی {payload?.timeZone || '—'}
         </p>
+        <div className="kpi-stat-row">
+          <KpiStat label="پیشرفت امروز" value={summary.total ? `${summary.done}/${summary.total}` : '—'} />
+          <KpiStat label="آماده دریافت" value={summary.claimable} />
+          <KpiStat label="XP باقی" value={summary.xpLeft ? `+${summary.xpLeft}` : '—'} />
+        </div>
         <div className="daily-missions__actions">
           <button type="button" className="button button-secondary" disabled={busy} onClick={() => void sync()}>
-            همگام‌سازی شواهد
+            به‌روزرسانی پیشرفت
           </button>
           <Link className="text-link" to="/progress">پیشرفت و پاداش</Link>
         </div>
@@ -72,18 +113,33 @@ export default function DailyMissionsPage() {
 
       {error ? <p className="daily-missions__error">{error}</p> : null}
 
+      <div className="daily-missions__filters" role="tablist" aria-label="فیلتر مأموریت">
+        {FILTERS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={filter === item.id}
+            className={`daily-missions__filter${filter === item.id ? ' is-active' : ''}`}
+            onClick={() => setFilter(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
       <PillarSection pillar="achieve" eyebrow="امروز" title="چه کاری معنادار انجام دهی؟">
-        {items.length === 0 ? (
+        {visible.length === 0 ? (
           <EmptyState
             pillar="achieve"
-            title="مأموریت آماده‌ای نیست"
-            description="با ثبت مطالعه، بازبینی یا ارزیابی، مأموریت‌های شواهدمحور پیشنهاد می‌شوند."
+            title="موردی در این فیلتر نیست"
+            description="فیلتر را عوض کن یا با مطالعه و بازبینی شواهد تازه بساز."
             actionTo="/reviews"
             actionLabel="بازبینی"
           />
         ) : (
           <ul className="daily-missions__list">
-            {items.map((mission) => {
+            {visible.map((mission) => {
               const ratio = mission.targetValue
                 ? Math.round((Math.min(mission.progress, mission.targetValue) / mission.targetValue) * 100)
                 : 0
@@ -91,7 +147,7 @@ export default function DailyMissionsPage() {
                 <li key={mission.id} className={`daily-missions__card is-${(mission.status || '').toLowerCase()}`}>
                   <div className="daily-missions__card-head">
                     <strong>{mission.title}</strong>
-                    <span className="daily-missions__status">{mission.status}</span>
+                    <StatusChip status={mission.status} />
                   </div>
                   <p>{mission.description}</p>
                   <p className="daily-missions__why">{mission.why}</p>
@@ -103,11 +159,17 @@ export default function DailyMissionsPage() {
                     {mission.pillar ? ` · ${mission.pillar}` : ''}
                   </p>
                   <Meter value={ratio} max={100} label={mission.title} tone="achieve" />
-                  {mission.status === 'Completed' ? (
-                    <button type="button" className="button button-primary" disabled={busy} onClick={() => void claim(mission.id)}>
-                      دریافت پاداش
-                    </button>
-                  ) : null}
+                  <div className="daily-missions__card-actions">
+                    {mission.status === 'Completed' ? (
+                      <button type="button" className="button button-primary" disabled={busy} onClick={() => void claim(mission.id)}>
+                        دریافت پاداش
+                      </button>
+                    ) : mission.status === 'Claimed' || mission.status === 'Expired' ? null : (
+                      <Link className="button button-secondary" to={missionStartTo(mission)}>
+                        شروع
+                      </Link>
+                    )}
+                  </div>
                   {mission.status === 'Claimed' ? <p className="daily-missions__done">پاداش دریافت شد.</p> : null}
                   {mission.status === 'Expired' ? <p className="daily-missions__done">منقضی — بدون جریمه.</p> : null}
                 </li>

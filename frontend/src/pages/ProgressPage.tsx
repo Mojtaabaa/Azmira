@@ -1,12 +1,18 @@
 // @ts-nocheck
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import EmptyState from '../components/ui/EmptyState'
+import Meter from '../components/ui/Meter'
+import StatusChip from '../components/ui/StatusChip'
 import { useAuth } from '../hooks/useAuth'
 import { request } from '../utils/api'
+import { resolveCapabilities } from '../utils/capabilities'
 import './ProgressPage.css'
 
 export default function ProgressPage() {
-  const { status } = useAuth()
+  const { status, user, workspaces, activeWorkspaceId, capabilities } = useAuth()
+  const caps = resolveCapabilities(capabilities, workspaces, activeWorkspaceId, user)
+  const canManageGamification = caps.platformAdmin || caps.active?.canManageSchool || caps.canManageSchool
   const [profile, setProfile] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -36,6 +42,11 @@ export default function ProgressPage() {
     }
   }
 
+  const claimable = useMemo(
+    () => (profile?.completedQuests || []).filter((quest) => quest.status === 'Completed'),
+    [profile],
+  )
+
   if (!profile && !error) return <p className="page-fallback">در حال بارگذاری پیشرفت…</p>
   if (error && !profile) return <p className="progress-error">{error}</p>
 
@@ -55,15 +66,20 @@ export default function ProgressPage() {
           </p>
         </div>
         <div className="progress-hero-links">
+          <Link className="progress-admin-link" to="/missions">
+            مأموریت‌های روزانه
+          </Link>
           <Link className="progress-admin-link" to="/store">
             فروشگاه · {profile.coins} سکه
           </Link>
           <Link className="progress-admin-link" to="/leaderboards">
             رتبه‌بندی
           </Link>
-          <Link className="progress-admin-link" to="/admin/gamification">
-            تنظیمات بازی‌سازی
-          </Link>
+          {canManageGamification ? (
+            <Link className="progress-admin-link" to="/admin/gamification">
+              تنظیمات بازی‌سازی
+            </Link>
+          ) : null}
         </div>
       </header>
 
@@ -76,46 +92,72 @@ export default function ProgressPage() {
               : 'بالاترین سطح'}
           </span>
         </div>
-        <div className="progress-bar" role="progressbar" aria-valuenow={ratio} aria-valuemin={0} aria-valuemax={100}>
-          <span style={{ width: `${ratio}%` }} />
-        </div>
+        <Meter value={ratio} max={100} label="پیشرفت سطح" tone="achieve" />
       </section>
 
       <div className="progress-grid">
         <section className="cardish">
           <h2>نشان‌ها</h2>
-          <ul className="badge-list">
-            {(profile.earnedBadges || []).length === 0 ? <li className="muted">هنوز نشانی نداری.</li> : null}
-            {(profile.earnedBadges || []).map((badge) => (
-              <li key={badge.id} className={`badge-chip tier-${badge.tier}`}>
-                <strong>{badge.title}</strong>
-                <span>{badge.description}</span>
-              </li>
-            ))}
-          </ul>
+          {(profile.earnedBadges || []).length === 0 ? (
+            <EmptyState
+              pillar="achieve"
+              title="هنوز نشانی نداری"
+              description="با تکمیل مأموریت‌ها و مسیر یادگیری، نشان‌ها ظاهر می‌شوند."
+              actionTo="/missions"
+              actionLabel="مأموریت‌ها"
+            />
+          ) : (
+            <ul className="badge-list">
+              {(profile.earnedBadges || []).map((badge) => (
+                <li key={badge.id} className={`badge-chip tier-${badge.tier}`}>
+                  <strong>{badge.title}</strong>
+                  <span>{badge.description}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         <section className="cardish">
           <h2>ماموریت‌های فعال</h2>
-          <ul className="quest-list">
-            {(profile.activeQuests || []).length === 0 ? <li className="muted">ماموریت فعالی نیست.</li> : null}
-            {(profile.activeQuests || []).map((quest) => (
-              <li key={quest.id}>
-                <div>
-                  <strong>{quest.title}</strong>
-                  <p>{quest.description}</p>
-                  <span dir="ltr">
-                    {quest.progress}/{quest.targetValue} · +{quest.rewardXp} XP
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {(profile.activeQuests || []).length === 0 ? (
+            <EmptyState
+              pillar="achieve"
+              title="ماموریت فعالی نیست"
+              description="مأموریت‌های روزانه را ببین یا مطالعه را شروع کن."
+              actionTo="/missions"
+              actionLabel="مأموریت‌های امروز"
+            />
+          ) : (
+            <ul className="quest-list">
+              {(profile.activeQuests || []).map((quest) => {
+                const qRatio = quest.targetValue
+                  ? Math.round((Math.min(quest.progress, quest.targetValue) / quest.targetValue) * 100)
+                  : 0
+                return (
+                  <li key={quest.id}>
+                    <div>
+                      <div className="progress-quest-head">
+                        <strong>{quest.title}</strong>
+                        <StatusChip status={quest.status || 'Active'} />
+                      </div>
+                      <p>{quest.description}</p>
+                      <span dir="ltr">
+                        {quest.progress}/{quest.targetValue} · +{quest.rewardXp} XP
+                      </span>
+                      <Meter value={qRatio} max={100} label={quest.title} tone="achieve" />
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
           <h2 className="progress-subhead">آماده دریافت</h2>
-          <ul className="quest-list">
-            {(profile.completedQuests || [])
-              .filter((quest) => quest.status === 'Completed')
-              .map((quest) => (
+          {claimable.length === 0 ? (
+            <p className="muted">هنوز پاداش آماده‌ای برای دریافت نیست.</p>
+          ) : (
+            <ul className="quest-list">
+              {claimable.map((quest) => (
                 <li key={quest.id} className="quest-claim">
                   <div>
                     <strong>{quest.title}</strong>
@@ -128,7 +170,8 @@ export default function ProgressPage() {
                   </button>
                 </li>
               ))}
-          </ul>
+            </ul>
+          )}
         </section>
       </div>
 

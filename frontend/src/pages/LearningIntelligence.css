@@ -152,3 +152,55 @@
     transform: none;
   }
 }
+
+.coach-cards {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.coach-card {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface, #fff) 88%, transparent);
+  display: grid;
+  gap: 6px;
+}
+
+.coach-card__list {
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+}
+
+.coach-evidence {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.coach-evidence li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: baseline;
+}
+
+.coach-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.coach-composer {
+  position: sticky;
+  bottom: 0;
+  padding-top: 8px;
+  background: color-mix(in srgb, var(--surface, #fff) 92%, transparent);
+}

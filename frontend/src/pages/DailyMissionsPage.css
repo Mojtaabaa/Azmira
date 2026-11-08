@@ -64,3 +64,31 @@
 .daily-missions__card.is-claimed {
   opacity: 0.85;
 }
+
+.daily-missions__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.daily-missions__filter {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.daily-missions__filter.is-active {
+  border-color: var(--pillar-achieve);
+  background: color-mix(in srgb, var(--pillar-achieve) 14%, transparent);
+}
+
+.daily-missions__card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

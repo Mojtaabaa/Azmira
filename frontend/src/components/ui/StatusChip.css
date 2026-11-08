@@ -1,0 +1,39 @@
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.4;
+  background: color-mix(in srgb, var(--border) 55%, transparent);
+  color: var(--text);
+}
+
+.status-chip--active,
+.status-chip--inprogress,
+.status-chip--available,
+.status-chip--ready {
+  background: color-mix(in srgb, var(--learn, #2a6f6a) 18%, transparent);
+  color: var(--learn, #2a6f6a);
+}
+
+.status-chip--completed,
+.status-chip--claimable,
+.status-chip--complete {
+  background: color-mix(in srgb, var(--achieve, #b45309) 18%, transparent);
+  color: var(--achieve, #b45309);
+}
+
+.status-chip--claimed {
+  background: color-mix(in srgb, var(--plan, #1d4ed8) 14%, transparent);
+  color: var(--plan, #1d4ed8);
+}
+
+.status-chip--expired,
+.status-chip--locked,
+.status-chip--collecting {
+  background: color-mix(in srgb, var(--muted, #6b7280) 18%, transparent);
+  color: var(--muted, #6b7280);
+}
