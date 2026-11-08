@@ -168,13 +168,30 @@ public class SocialGamificationTests
         await SeedXpAsync(db, workspaceId, userA, 30);
         await SeedXpAsync(db, workspaceId, userB, 50);
 
-        await boards.UpdatePrivacyAsync(workspaceId, userB, leaderboardVisible: false, showRealName: true, CancellationToken.None);
+        // Opt-in required (default private). userB stays private / no row.
+        await boards.UpdatePrivacyAsync(workspaceId, userA, leaderboardVisible: true, showRealName: true, CancellationToken.None);
         var json = JsonSerializer.Serialize(await boards.GetBoardAsync(workspaceId, LeaderboardMetric.WeeklyXp, "week", null, null, 1, 20, CancellationToken.None));
         using var doc = JsonDocument.Parse(json);
         var entries = doc.RootElement.GetProperty("entries");
         Assert.Equal(1, entries.GetArrayLength());
         Assert.Equal(userA, entries[0].GetProperty("userId").GetInt32());
         Assert.Equal("بازیکن اجتماعی", entries[0].GetProperty("displayName").GetString());
+    }
+
+    [Fact]
+    public async Task Leaderboard_excludes_members_without_privacy_opt_in()
+    {
+        var (sp, workspaceId, userA) = await CreateAsync();
+        await using var scope = sp.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var boards = scope.ServiceProvider.GetRequiredService<LeaderboardService>();
+        await SeedXpAsync(db, workspaceId, userA, 40);
+
+        var json = JsonSerializer.Serialize(await boards.GetBoardAsync(
+            workspaceId, LeaderboardMetric.WeeklyXp, "week", null, null, 1, 20, CancellationToken.None));
+        using var doc = JsonDocument.Parse(json);
+        Assert.Equal(0, doc.RootElement.GetProperty("entries").GetArrayLength());
+        Assert.Equal(0, doc.RootElement.GetProperty("total").GetInt32());
     }
 
     [Fact]
@@ -191,6 +208,7 @@ public class SocialGamificationTests
             new StudyRecord { UserId = userId, WorkspaceId = workspaceId, Collection = "tests", ItemId = "t3", Data = """{"subject":"physics","score":90}""" },
             new StudyRecord { UserId = userId, WorkspaceId = workspaceId, Collection = "tests", ItemId = "t4", Data = """{"subject":"math","score":250}""" });
         await db.SaveChangesAsync();
+        await boards.UpdatePrivacyAsync(workspaceId, userId, leaderboardVisible: true, showRealName: true, CancellationToken.None);
 
         var json = JsonSerializer.Serialize(await boards.GetBoardAsync(
             workspaceId, LeaderboardMetric.LearningImprovement, "all", "math", null, 1, 20, CancellationToken.None));
@@ -304,6 +322,8 @@ public class SocialGamificationTests
 
         await SeedXpAsync(db, workspaceId, inClass, 40);
         await SeedXpAsync(db, workspaceId, outClass, 90);
+        await boards.UpdatePrivacyAsync(workspaceId, inClass, leaderboardVisible: true, showRealName: true, CancellationToken.None);
+        await boards.UpdatePrivacyAsync(workspaceId, outClass, leaderboardVisible: true, showRealName: true, CancellationToken.None);
 
         var json = JsonSerializer.Serialize(await boards.GetBoardAsync(
             workspaceId, LeaderboardMetric.Class, "week", null, classId, 1, 20, CancellationToken.None));
@@ -326,6 +346,8 @@ public class SocialGamificationTests
 
         await SeedXpAsync(dbA, workspaceA, userA, 70);
         await SeedXpAsync(scopeB.ServiceProvider.GetRequiredService<AppDbContext>(), workspaceB, userB, 120);
+        await boardsA.UpdatePrivacyAsync(workspaceA, userA, leaderboardVisible: true, showRealName: true, CancellationToken.None);
+        await boardsB.UpdatePrivacyAsync(workspaceB, userB, leaderboardVisible: true, showRealName: true, CancellationToken.None);
 
         var json = JsonSerializer.Serialize(await boardsA.GetBoardAsync(
             workspaceA, LeaderboardMetric.WeeklyXp, "week", null, null, 1, 20, CancellationToken.None));

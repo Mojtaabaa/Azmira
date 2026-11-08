@@ -72,6 +72,7 @@ export const NAV_GROUPS = [
     labelEn: 'IMPROVE',
     items: [
       { to: '/improve', label: 'مرکز بهبود', short: 'بهبود', icon: 'pillar-improve', end: true },
+      { to: '/improvement', label: 'بهبود شخصی', short: 'Δ شخصی', icon: 'chart' },
       { to: '/analytics', label: 'آمار یادگیری', short: 'آمار', icon: 'chart' },
       { to: '/mistakes', label: 'اشتباهات', short: 'اشتباه', icon: 'mistakes' },
       { to: '/ai-coach', label: 'مربی یادگیری', short: 'مربی', icon: 'coach' },

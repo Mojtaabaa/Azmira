@@ -78,6 +78,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<JourneyRegion> JourneyRegions => Set<JourneyRegion>();
     public DbSet<JourneyStage> JourneyStages => Set<JourneyStage>();
     public DbSet<LearnerJourneyProgress> LearnerJourneyProgress => Set<LearnerJourneyProgress>();
+    public DbSet<PersonalBaseline> PersonalBaselines => Set<PersonalBaseline>();
+    public DbSet<ImprovementSnapshot> ImprovementSnapshots => Set<ImprovementSnapshot>();
+    public DbSet<CoachThread> CoachThreads => Set<CoachThread>();
+    public DbSet<CoachMessage> CoachMessages => Set<CoachMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -857,6 +861,44 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(item => item.EvidenceJson).IsRequired();
             entity.HasIndex(item => new { item.WorkspaceId, item.UserId, item.JourneyId }).IsUnique();
             entity.HasOne(item => item.Journey).WithMany().HasForeignKey(item => item.JourneyId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PersonalBaseline>(entity =>
+        {
+            entity.ToTable("PersonalBaselines");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.SubjectKey).HasMaxLength(120).IsRequired();
+            entity.Property(item => item.EvidenceSummaryJson).IsRequired();
+            entity.HasIndex(item => new { item.WorkspaceId, item.UserId, item.SubjectKey }).IsUnique();
+        });
+
+        modelBuilder.Entity<ImprovementSnapshot>(entity =>
+        {
+            entity.ToTable("ImprovementSnapshots");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.SubjectKey).HasMaxLength(120).IsRequired();
+            entity.Property(item => item.PeriodKey).HasMaxLength(40).IsRequired();
+            entity.HasIndex(item => new { item.WorkspaceId, item.UserId, item.SubjectKey, item.PeriodKey }).IsUnique();
+        });
+
+        modelBuilder.Entity<CoachThread>(entity =>
+        {
+            entity.ToTable("CoachThreads");
+            entity.HasKey(item => item.Id);
+            entity.HasIndex(item => new { item.WorkspaceId, item.UserId, item.UpdatedAt });
+        });
+
+        modelBuilder.Entity<CoachMessage>(entity =>
+        {
+            entity.ToTable("CoachMessages");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Role).HasMaxLength(20).IsRequired();
+            entity.Property(item => item.Content).IsRequired();
+            entity.Property(item => item.Confidence).HasMaxLength(16).IsRequired();
+            entity.Property(item => item.EvidenceRefsJson).IsRequired();
+            entity.Property(item => item.ProviderCode).HasMaxLength(40).IsRequired();
+            entity.HasIndex(item => new { item.ThreadId, item.CreatedAt });
+            entity.HasOne(item => item.Thread).WithMany(item => item.Messages).HasForeignKey(item => item.ThreadId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

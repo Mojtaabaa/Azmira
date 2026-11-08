@@ -35,6 +35,7 @@ public sealed class LeaderboardService(AppDbContext db)
             })
             .ToList();
 
+        var meta = DescribeMetric(metric);
         return new
         {
             metric = metric.ToString(),
@@ -45,8 +46,39 @@ public sealed class LeaderboardService(AppDbContext db)
             pageSize,
             total,
             entries = pageRows,
+            viewKind = meta.ViewKind,
+            labelFa = meta.LabelFa,
+            labelEn = meta.LabelEn,
+            privacyDefault = "private",
+            peerComparison = meta.PeerComparison,
+            note = meta.Note,
         };
     }
+
+    private static (string ViewKind, string LabelFa, string LabelEn, bool PeerComparison, string Note) DescribeMetric(LeaderboardMetric metric) =>
+        metric switch
+        {
+            LeaderboardMetric.LearningImprovement => (
+                "peerComparison",
+                "بهبود یادگیری (مقایسه هم‌کلاسی — اختیاری)",
+                "Learning improvement (peer)",
+                true,
+                "این نمای گروهی است؛ نمای پیش‌فرض محصول، بهبود شخصی نسبت به معیار خودت است (/improvement/me)."),
+            LeaderboardMetric.WeeklyXp or LeaderboardMetric.MonthlyXp or LeaderboardMetric.School
+                or LeaderboardMetric.Class or LeaderboardMetric.Team or LeaderboardMetric.QuestCompletion => (
+                "engagement",
+                "فعالیت و دستاورد",
+                "Engagement / achievement activity",
+                true,
+                "امتیاز فعالیت است و با بهبود شخصی (تسلط/ارزیابی) یکی نیست."),
+            LeaderboardMetric.Consistency or LeaderboardMetric.GoalCompletion or LeaderboardMetric.SubjectPerformance => (
+                "engagement",
+                metric.ToString(),
+                metric.ToString(),
+                true,
+                "جدول رتبه‌بندی اختیاری است؛ نمایش پیش‌فرض خصوصی است."),
+            _ => ("engagement", metric.ToString(), metric.ToString(), true, "جدول رتبه‌بندی اختیاری است."),
+        };
 
     public async Task<object> SnapshotAsync(
         Guid workspaceId,
@@ -116,7 +148,13 @@ public sealed class LeaderboardService(AppDbContext db)
     public async Task<object> GetPrivacyAsync(Guid workspaceId, int userId, CancellationToken cancellationToken)
     {
         var row = await EnsurePrivacyAsync(workspaceId, userId, cancellationToken);
-        return new { leaderboardVisible = row.LeaderboardVisible, showRealName = row.ShowRealName };
+        return new
+        {
+            leaderboardVisible = row.LeaderboardVisible,
+            showRealName = row.ShowRealName,
+            privacyDefault = "private",
+            note = "نمایش در جدول‌های گروهی به‌صورت پیش‌فرض خاموش است؛ بهبود شخصی از /improvement/me است.",
+        };
     }
 
     public async Task<object> UpdatePrivacyAsync(
@@ -146,7 +184,7 @@ public sealed class LeaderboardService(AppDbContext db)
         {
             WorkspaceId = workspaceId,
             UserId = userId,
-            LeaderboardVisible = true,
+            LeaderboardVisible = false,
             ShowRealName = workspace.Type == WorkspaceType.Personal,
             UpdatedAt = DateTime.UtcNow,
         };
@@ -192,7 +230,7 @@ public sealed class LeaderboardService(AppDbContext db)
         foreach (var row in raw.Where(item => item.UserId > 0))
         {
             privacy.TryGetValue(row.UserId, out var settings);
-            var showName = settings?.ShowRealName ?? true;
+            var showName = settings?.ShowRealName ?? false;
             if (showName && users.TryGetValue(row.UserId, out var user) && !string.IsNullOrWhiteSpace(user.DisplayName))
             {
                 row.DisplayName = user.DisplayName!;
@@ -236,12 +274,13 @@ public sealed class LeaderboardService(AppDbContext db)
         }
 
         var ids = await baseQuery.Distinct().ToListAsync(cancellationToken);
-        var hidden = await db.UserPrivacySettings.AsNoTracking()
-            .Where(item => item.WorkspaceId == workspaceId && !item.LeaderboardVisible)
+        // Opt-in: missing privacy row = private (Phase 12 default). Only LeaderboardVisible=true appear.
+        var visible = await db.UserPrivacySettings.AsNoTracking()
+            .Where(item => item.WorkspaceId == workspaceId && item.LeaderboardVisible)
             .Select(item => item.UserId)
             .ToListAsync(cancellationToken);
-        var hiddenSet = hidden.ToHashSet();
-        return ids.Where(id => !hiddenSet.Contains(id)).ToHashSet();
+        var visibleSet = visible.ToHashSet();
+        return ids.Where(id => visibleSet.Contains(id)).ToHashSet();
     }
 
     private async Task<List<RankRow>> XpRowsAsync(

@@ -80,7 +80,8 @@ public sealed class UserPrivacySettings
 {
     public Guid WorkspaceId { get; set; }
     public int UserId { get; set; }
-    public bool LeaderboardVisible { get; set; } = true;
+    /// <summary>Default private — school cohort is opt-in (Phase 12).</summary>
+    public bool LeaderboardVisible { get; set; }
     public bool ShowRealName { get; set; } = true;
     public DateTime UpdatedAt { get; set; }
 }

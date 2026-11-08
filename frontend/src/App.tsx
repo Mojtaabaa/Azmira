@@ -34,6 +34,7 @@ const PlatformAdminPage = lazy(() => import('./pages/PlatformAdminPage'))
 const PillarHubPage = lazy(() => import('./pages/PillarHubPage'))
 const DailyMissionsPage = lazy(() => import('./pages/DailyMissionsPage'))
 const LearningJourneyPage = lazy(() => import('./pages/LearningJourneyPage'))
+const PersonalImprovementPage = lazy(() => import('./pages/PersonalImprovementPage'))
 
 function PageFallback() {
   return <p className="page-fallback">در حال باز شدن…</p>
@@ -61,6 +62,7 @@ export default function App() {
               <Route index element={<DashboardPage />} />
               <Route path="learn" element={<Suspense fallback={<PageFallback />}><LearnHub /></Suspense>} />
               <Route path="improve" element={<Suspense fallback={<PageFallback />}><ImproveHub /></Suspense>} />
+              <Route path="improvement" element={<Suspense fallback={<PageFallback />}><PersonalImprovementPage /></Suspense>} />
               <Route path="achieve" element={<Suspense fallback={<PageFallback />}><AchieveHub /></Suspense>} />
               <Route path="missions" element={<Suspense fallback={<PageFallback />}><DailyMissionsPage /></Suspense>} />
               <Route path="journey" element={<Suspense fallback={<PageFallback />}><LearningJourneyPage /></Suspense>} />

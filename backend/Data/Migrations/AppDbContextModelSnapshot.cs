@@ -695,6 +695,73 @@ namespace KonkoorHelp.Api.Data.Migrations
                     b.ToTable("ClassMembers", (string)null);
                 });
 
+            modelBuilder.Entity("KonkoorHelp.Api.Data.CoachMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Confidence")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EvidenceRefsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProviderCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid>("ThreadId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ThreadId", "CreatedAt");
+
+                    b.ToTable("CoachMessages", (string)null);
+                });
+
+            modelBuilder.Entity("KonkoorHelp.Api.Data.CoachThread", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId", "UserId", "UpdatedAt");
+
+                    b.ToTable("CoachThreads", (string)null);
+                });
+
             modelBuilder.Entity("KonkoorHelp.Api.Data.CoinLedger", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1102,6 +1169,48 @@ namespace KonkoorHelp.Api.Data.Migrations
                     b.ToTable("GuardianStudentLinks", (string)null);
                 });
 
+            modelBuilder.Entity("KonkoorHelp.Api.Data.ImprovementSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("AbsoluteScore")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("CapturedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EvidenceEventCount")
+                        .HasColumnType("int");
+
+                    b.Property<double>("ImprovementPercent")
+                        .HasColumnType("float");
+
+                    b.Property<string>("PeriodKey")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("SubjectKey")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId", "UserId", "SubjectKey", "PeriodKey")
+                        .IsUnique();
+
+                    b.ToTable("ImprovementSnapshots", (string)null);
+                });
+
             modelBuilder.Entity("KonkoorHelp.Api.Data.JourneyDefinition", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1467,6 +1576,53 @@ namespace KonkoorHelp.Api.Data.Migrations
                     b.HasIndex("WorkspaceId");
 
                     b.ToTable("NoteSettings", (string)null);
+                });
+
+            modelBuilder.Entity("KonkoorHelp.Api.Data.PersonalBaseline", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("BaselineScore")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("EstablishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EvidenceEventCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EvidenceSummaryJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("RebaselinedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SubjectKey")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("WindowEnd")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("WindowStart")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("WorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkspaceId", "UserId", "SubjectKey")
+                        .IsUnique();
+
+                    b.ToTable("PersonalBaselines", (string)null);
                 });
 
             modelBuilder.Entity("KonkoorHelp.Api.Data.ProcessedEvent", b =>
@@ -3108,6 +3264,17 @@ namespace KonkoorHelp.Api.Data.Migrations
                     b.Navigation("Class");
                 });
 
+            modelBuilder.Entity("KonkoorHelp.Api.Data.CoachMessage", b =>
+                {
+                    b.HasOne("KonkoorHelp.Api.Data.CoachThread", "Thread")
+                        .WithMany("Messages")
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Thread");
+                });
+
             modelBuilder.Entity("KonkoorHelp.Api.Data.CompetitionParticipant", b =>
                 {
                     b.HasOne("KonkoorHelp.Api.Data.Competition", "Competition")
@@ -3404,6 +3571,11 @@ namespace KonkoorHelp.Api.Data.Migrations
             modelBuilder.Entity("KonkoorHelp.Api.Data.ClassGroup", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("KonkoorHelp.Api.Data.CoachThread", b =>
+                {
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("KonkoorHelp.Api.Data.JourneyDefinition", b =>
