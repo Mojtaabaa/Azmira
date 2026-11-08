@@ -1,4 +1,4 @@
-# 11. Implementation roadmap — Phases 9–14
+# 11. Implementation roadmap — Phases 9–16
 
 ## Phase 9 — Experience shell & identity
 - Pillar navigation + learner home composition (consume existing APIs)
@@ -35,5 +35,19 @@
 - Home prefers `/learner/home` compose; reduce redundant fan-out
 - Release smoke tests for critical learner paths
 - Residual risk register for go-live
+
+## Phase 15 — Production go-live
+- Merge Phase 14; SQL backup gate before any IIS overwrite
+- Publish Release package (`publish.ps1`); deploy to https://rotbeh.viannacloud.ir
+- Startup `MigrateAsync` for pending Experience Beta migrations
+- Post-deploy health + product/privacy smoke; go-live report
+- Rollback = prior binaries + DB restore (no hand-edited schema)
+
+## Phase 16 — Learner UX & KPI completion
+- Home compose-first (pulses, merge PLAN, mission meters; drop `/mastery` fan-out)
+- Learn/Achieve hubs with live KPIs + primary CTA
+- Progress / Daily Missions management (filters, deep-links, gated admin)
+- Journey % KPIs + unlock checklist; Improvement sparkline polish
+- Coach structured cards; Leaderboards subject picker; Store browse filters
 
 Each phase: incremental PR, tests, no drive-by refactors.

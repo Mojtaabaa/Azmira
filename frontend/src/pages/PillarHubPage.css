@@ -2,6 +2,15 @@
   margin-bottom: var(--space-5, 20px);
 }
 
+.pillar-hub__kpis {
+  margin-top: 12px;
+}
+
+.pillar-hub__cta {
+  margin-top: 12px;
+  display: inline-flex;
+}
+
 .pillar-hub__en {
   margin: 0 0 6px;
   font-size: 0.72rem;

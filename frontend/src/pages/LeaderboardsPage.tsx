@@ -1,7 +1,9 @@
 // @ts-nocheck
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import EmptyState from '../components/ui/EmptyState'
 import { useAuth } from '../hooks/useAuth'
+import { useSettings } from '../hooks/useSettings'
 import { request } from '../utils/api'
 import './SocialGamification.css'
 
@@ -17,15 +19,26 @@ const METRICS = [
 ]
 
 export default function LeaderboardsPage() {
-  const { status } = useAuth()
+  const { status, user } = useAuth()
+  const settings = useSettings()
+  const subjectOptions = useMemo(() => {
+    const custom = (settings?.customSubjects || []).map((s) => s.name || s.id).filter(Boolean)
+    const defaults = ['ریاضی', 'فیزیک', 'شیمی', 'زیست', 'ادبیات', 'عربی', 'دینی', 'زبان']
+    return [...new Set([...custom, ...defaults])]
+  }, [settings])
+
   const [metric, setMetric] = useState('PersonalImprovement')
   const [board, setBoard] = useState(null)
   const [selfView, setSelfView] = useState(null)
   const [privacy, setPrivacy] = useState({ leaderboardVisible: false, showRealName: true })
   const [page, setPage] = useState(1)
-  const [subject, setSubject] = useState('ریاضی')
+  const [subject, setSubject] = useState(subjectOptions[0] || 'ریاضی')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!subjectOptions.includes(subject) && subjectOptions[0]) setSubject(subjectOptions[0])
+  }, [subjectOptions, subject])
 
   const load = useCallback(async () => {
     try {
@@ -45,13 +58,13 @@ export default function LeaderboardsPage() {
         page: String(page),
         pageSize: '20',
       })
-      if (metric === 'LearningImprovement') qs.set('subject', subject || 'ریاضی')
+      if (metric === 'LearningImprovement') qs.set('subject', subject || subjectOptions[0] || 'ریاضی')
       setBoard(await request('GET', `/leaderboards?${qs.toString()}`))
       setSelfView(null)
     } catch (err) {
       setError(err.message || 'بارگذاری جدول رتبه‌بندی ممکن نشد.')
     }
-  }, [metric, page, subject])
+  }, [metric, page, subject, subjectOptions])
 
   useEffect(() => {
     if (status === 'authed') void load()
@@ -73,6 +86,8 @@ export default function LeaderboardsPage() {
   if (!board && !selfView && !error) return <p className="page-fallback">در حال بارگذاری رتبه‌بندی…</p>
 
   const composite = selfView?.composite
+  const myUserId = user?.id
+  const peerEmpty = board && (board.entries || []).length === 0
 
   return (
     <div className="social-page">
@@ -131,7 +146,13 @@ export default function LeaderboardsPage() {
         <div className="social-panel">
           <label>
             درس برای مقایسه هم‌کلاسی{' '}
-            <input value={subject} onChange={(e) => setSubject(e.target.value)} />
+            <select value={subject} onChange={(e) => setSubject(e.target.value)}>
+              {subjectOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
           </label>
           <p className="muted">{board?.note}</p>
         </div>
@@ -153,11 +174,31 @@ export default function LeaderboardsPage() {
               </li>
             </ol>
           ) : (
-            <p className="muted">{composite?.message || 'در حال جمع‌آوری معیار پایه'}</p>
+            <EmptyState
+              pillar="improve"
+              title={composite?.message || 'در حال جمع‌آوری معیار پایه'}
+              description="پس از Ready شدن، Δ شخصی اینجا دیده می‌شود."
+              actionTo="/improvement"
+              actionLabel="بهبود شخصی"
+            />
           )}
           <Link className="text-link" to="/improvement">
             جزئیات و نمودار
           </Link>
+        </section>
+      ) : peerEmpty ? (
+        <section className="social-panel">
+          <EmptyState
+            pillar="achieve"
+            title={!privacy.leaderboardVisible ? 'جدول گروهی خالی یا خصوصی است' : 'هنوز رتبه‌ای ثبت نشده'}
+            description={
+              !privacy.leaderboardVisible
+                ? 'اگر می‌خواهی دیده شوی، نمایش در جدول‌های گروهی را در حریم خصوصی روشن کن.'
+                : 'با کسب XP یا بهبود شخصی، ردیف‌ها ظاهر می‌شوند.'
+            }
+            actionTo="/improvement"
+            actionLabel="بهبود شخصی"
+          />
         </section>
       ) : (
         <section className="social-panel">
@@ -169,14 +210,19 @@ export default function LeaderboardsPage() {
             </p>
           ) : null}
           <ol className="rank-list">
-            {(board?.entries || []).length === 0 ? <li className="muted">هنوز رتبه‌ای ثبت نشده.</li> : null}
-            {(board?.entries || []).map((row) => (
-              <li key={`${row.rank}-${row.userId || row.teamId}`}>
-                <span className="rank-num">#{row.rank}</span>
-                <span className="rank-name">{row.displayName}</span>
-                <strong className="rank-score">{row.score}</strong>
-              </li>
-            ))}
+            {(board?.entries || []).map((row) => {
+              const isSelf = myUserId != null && Number(row.userId) === Number(myUserId)
+              return (
+                <li key={`${row.rank}-${row.userId || row.teamId}`} className={isSelf ? 'is-self' : undefined}>
+                  <span className="rank-num">#{row.rank}</span>
+                  <span className="rank-name">
+                    {row.displayName}
+                    {isSelf ? ' · تو' : ''}
+                  </span>
+                  <strong className="rank-score">{row.score}</strong>
+                </li>
+              )
+            })}
           </ol>
           <div className="social-pager">
             <button type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>

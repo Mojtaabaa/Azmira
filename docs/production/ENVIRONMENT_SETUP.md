@@ -15,11 +15,13 @@ Optional AI:
 
 ## Staging / production
 
-- Prefer environment variables over checked-in JSON for secrets.
-- `appsettings.Production.json` ships with empty connection string on purpose.
-- Enable HTTPS at the proxy; set `ForwardedHeaders` is already wired.
+- Put live secrets in **`sandbox/appsettings.json`** on the server (see `sandbox/README.md`). This file is listed in `PRESERVE.manifest.json` and is not replaced by `install-rotbeh.ps1`.
+- Each release ships `sandbox/appsettings.defaults.json`. On startup (and after install), **missing keys are merged in**; existing values are never overwritten.
+- Optional override: env var `ROTBEH_SANDBOX` = absolute path to the sandbox directory.
+- `appsettings.Production.json` in the package stays empty on purpose; sandbox / env supply real values.
+- Enable HTTPS at the proxy; `ForwardedHeaders` is already wired.
 - Configure `Security:AllowedOrigins` for any non-same-origin browser clients.
-- Set `Integrations__WebhookProtectionKey` to a Base64 32-byte key (required in Production for new webhook secrets).
+- Set `Integrations:WebhookProtectionKey` (sandbox) or `Integrations__WebhookProtectionKey` (env) to a Base64 32-byte key.
 - Health: `/health/live` (liveness), `/health/ready` (DB), `/health` (combined).
 
 ### Generate a webhook protection key

@@ -241,3 +241,25 @@
     align-items: flex-start;
   }
 }
+
+.journey-node.is-next .journey-node__btn {
+  border-color: color-mix(in srgb, var(--accent, #b85c38) 55%, transparent);
+  background: color-mix(in srgb, var(--accent, #b85c38) 12%, #fff);
+}
+
+.journey-checklist {
+  margin: 0 0 1rem;
+  padding: 0 0 0 1.2rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.text-link-btn {
+  border: 0;
+  background: none;
+  color: var(--accent, #b85c38);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}

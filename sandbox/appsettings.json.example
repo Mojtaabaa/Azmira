@@ -1,0 +1,25 @@
+{
+  "ConnectionStrings": {
+    "KonkoorHelp": "Server=YOUR_SQL;Database=KonkoorHelp;User Id=...;Password=...;TrustServerCertificate=True"
+  },
+  "Ai": {
+    "DefaultProvider": "heuristic",
+    "OpenAiApiKey": "",
+    "OpenAiBaseUrl": "https://api.openai.com/v1",
+    "OpenAiModel": "gpt-4o-mini"
+  },
+  "Security": {
+    "AllowedOrigins": []
+  },
+  "Integrations": {
+    "WebhookProtectionKey": "BASE64_32_BYTE_KEY"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}

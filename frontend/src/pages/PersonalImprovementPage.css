@@ -91,3 +91,36 @@
     grid-template-columns: 1fr;
   }
 }
+
+.improve-page__tick {
+  fill: color-mix(in srgb, var(--text, #111) 55%, transparent);
+  font-size: 8px;
+}
+
+.improve-page__spark-legend {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.8rem;
+}
+
+.improve-page__spark-legend li {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.improve-page__stagnate {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent, #0f766e) 10%, transparent);
+}
+
+.improve-page__subject-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}

@@ -8,25 +8,32 @@
 
 ## Configuration
 
-Set secrets via environment variables or a secret store — **never** commit production credentials.
+Prefer **`sandbox/appsettings.json`** on the install host (never overwritten by updates). Environment variables still override sandbox when set.
 
-| Setting | Env var example | Notes |
-|---------|-----------------|-------|
-| Connection string | `ConnectionStrings__KonkoorHelp` | Required in Production |
-| AI provider | `Ai__DefaultProvider` | `heuristic` / `null` / OpenAI-compatible |
-| OpenAI key | `Ai__OpenAiApiKey` | Optional; leave empty if unused |
-| Allowed Origins | `Security__AllowedOrigins__0` | Extra browser origins beyond same-host + Vite |
-| Webhook secret key | `Integrations__WebhookProtectionKey` | Base64 32-byte AES-GCM key; required in Production |
+| Setting | Sandbox JSON / Env var | Notes |
+|---------|------------------------|-------|
+| Connection string | `ConnectionStrings:KonkoorHelp` / `ConnectionStrings__KonkoorHelp` | Required in Production |
+| AI provider | `Ai:DefaultProvider` | `heuristic` / `null` / OpenAI-compatible |
+| OpenAI key | `Ai:OpenAiApiKey` | Optional; leave empty if unused |
+| Allowed Origins | `Security:AllowedOrigins` | Extra browser origins beyond same-host + Vite |
+| Webhook secret key | `Integrations:WebhookProtectionKey` | Base64 32-byte AES-GCM key; required in Production |
+
+See [`sandbox/README.md`](../../sandbox/README.md) and `sandbox/PRESERVE.manifest.json` for the preserve list.
 
 Production refuses to start if the connection string is empty.
 
 ## Release steps
 
 1. Backup database (see `DATABASE_MIGRATIONS.md`).
-2. Deploy new binaries / container image.
-3. Start app: `DatabaseBootstrap` runs `MigrateAsync` (additive only) then seeds defaults.
-4. Smoke: `GET /health/live`, `GET /health/ready`, login, create a study session.
-5. Confirm webhooks/outbox workers are running (hosted services).
+2. Build: `.\publish.ps1` → `publish/`.
+3. Update site (keeps sandbox secrets):
+   ```powershell
+   .\publish\install-rotbeh.ps1 -Source .\publish -Target C:\inetpub\Rotbeh
+   ```
+4. First install only: copy `sandbox\appsettings.json.example` → `sandbox\appsettings.json` and fill secrets (installer does this if missing).
+5. Start app: merges any **new** keys from `sandbox/appsettings.defaults.json` into live sandbox settings, then `MigrateAsync`.
+6. Smoke: `GET /health/live`, `GET /health/ready`, login, create a study session.
+7. Confirm webhooks/outbox workers are running (hosted services).
 
 ## Rollback
 

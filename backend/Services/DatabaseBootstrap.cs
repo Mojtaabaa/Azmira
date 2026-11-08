@@ -28,6 +28,12 @@ public static class DatabaseBootstrap
 
         await PrepareLegacyEnsureCreatedAsync(db, logger, cancellationToken);
         await db.Database.MigrateAsync(cancellationToken);
+        // Legacy DBs may have InitialWorkspace stamped without soft-delete/workspace columns.
+        // Idempotent ALTERs close that gap before any bootstrap query hits DeletedAt.
+        if (await TableExistsAsync(db, "Users", cancellationToken))
+        {
+            await EnsureWorkspaceSchemaAsync(db, cancellationToken);
+        }
         await workspaces.BootstrapAllAsync(cancellationToken);
         await DefaultGamificationSeed.EnsureAsync(db, cancellationToken);
         await DefaultStoreSeed.EnsureAsync(db, cancellationToken);
@@ -117,12 +123,9 @@ public static class DatabaseBootstrap
             """,
             cancellationToken);
 
-        // EnsureCreated schema is missing workspace columns/tables; apply them via the next migration if any.
-        // When only one migration exists (full snapshot), recreate missing pieces with EnsureCreated-compatible alter.
-        if (pending.Count == 1)
-        {
-            await EnsureWorkspaceSchemaAsync(db, cancellationToken);
-        }
+        // Always patch missing soft-delete / workspace columns on legacy EnsureCreated schemas
+        // (not only when a single migration remains — multi-migration stamp used to skip this).
+        await EnsureWorkspaceSchemaAsync(db, cancellationToken);
     }
 
     private static async Task EnsureWorkspaceSchemaAsync(AppDbContext db, CancellationToken cancellationToken)

@@ -272,3 +272,34 @@
     flex-direction: column;
   }
 }
+
+.rank-list li.is-self {
+  border: 1px solid color-mix(in srgb, var(--accent, #0d9488) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent, #0d9488) 10%, var(--surface, #fff));
+}
+
+.store-filters {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.store-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.store-filter-chip {
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+  color: inherit;
+}
+
+.store-filter-chip.is-active {
+  border-color: var(--accent, #0d9488);
+  background: color-mix(in srgb, var(--accent, #0d9488) 14%, transparent);
+}

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "description": "Paths under the install root that must survive version updates. Relative to content root (same folder as KonkoorHelp.Api.dll).",
+  "preserve": [
+    "sandbox/appsettings.json",
+    "sandbox/local/**",
+    "sandbox/secrets/**"
+  ],
+  "notes": [
+    "Ship/update may replace sandbox/appsettings.defaults.json and PRESERVE.manifest.json.",
+    "Never overwrite sandbox/appsettings.json during robocopy /MIR — use install-rotbeh.ps1.",
+    "On startup, missing keys from appsettings.defaults.json are merged into appsettings.json without clobbering existing values."
+  ]
+}
