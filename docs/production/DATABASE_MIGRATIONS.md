@@ -8,6 +8,14 @@
 
 Phase 7 migration: `20261107065105_AddIntegrations` (ApiClients, ApiClientWorkspaces, WebhookEndpoints, WebhookDeliveries).
 
+Experience Beta (Phases 9–13) additive migrations — see also `docs/product/PHASE_14_BETA_CHECKLIST.md`:
+
+- `AddLearningJourney`
+- `AddPersonalImprovementAndCoach`
+- `AddJourneyPackPublishFlags`
+
+(Plus earlier gamification / school / intelligence migrations already on main.)
+
 ## Commands (ops)
 
 ```bash

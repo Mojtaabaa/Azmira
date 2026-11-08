@@ -65,17 +65,15 @@ export default function DashboardPage() {
     setProfileState('loading')
     setRemoteError('')
 
+    // Phase 14: prefer composed /learner/home; fan-out only for surfaces home does not cover.
     Promise.all([
       request('GET', '/learner/home', undefined, { silent: true }).catch(() => null),
-      request('GET', '/gamification/me', undefined, { silent: true }).catch(() => null),
       request('GET', '/store/inventory', undefined, { silent: true }).catch(() => null),
-      request('GET', '/reviews/due', undefined, { silent: true }).catch(() => null),
       request('GET', '/mastery', undefined, { silent: true }).catch(() => null),
-      request('GET', '/missions/daily', undefined, { silent: true }).catch(() => null),
-    ]).then(([home, me, inv, due, mastery, missions]) => {
+    ]).then(([home, inv, mastery]) => {
       if (!alive) return
       setHomeCompose(home)
-      const profilePayload = me || home?.profile || null
+      const profilePayload = home?.profile || null
       if (profilePayload) {
         setProfile(profilePayload)
         setProfileState('ready')
@@ -85,17 +83,9 @@ export default function DashboardPage() {
       }
       setLoadout(inv?.loadout || null)
       setInventory(inv?.items || [])
-      const dueCount =
-        home?.reviewsDue != null
-          ? home.reviewsDue
-          : Array.isArray(due?.items)
-            ? due.items.length
-            : Array.isArray(due)
-              ? due.length
-              : null
-      setReviewsDue(dueCount)
+      setReviewsDue(home?.reviewsDue != null ? home.reviewsDue : null)
       setMasteryItems(Array.isArray(mastery?.items) ? mastery.items : null)
-      setDailyMissions(missions || home?.dailyMissions || null)
+      setDailyMissions(home?.dailyMissions || null)
     }).catch((err) => {
       if (!alive) return
       setProfileState('error')

@@ -1,4 +1,4 @@
-# 11. Implementation roadmap — Phases 9–13
+# 11. Implementation roadmap — Phases 9–14
 
 ## Phase 9 — Experience shell & identity
 - Pillar navigation + learner home composition (consume existing APIs)
@@ -28,5 +28,12 @@
 - Motion / empty-state polish; a11y audit
 - Load tests on home compose endpoint; privacy review
 - Deprecate duplicate streak UI
+
+## Phase 14 — Beta release gate
+- Experience Beta readiness checklist (Phases 8–13)
+- Migration inventory for ops (no production deploy in-phase)
+- Home prefers `/learner/home` compose; reduce redundant fan-out
+- Release smoke tests for critical learner paths
+- Residual risk register for go-live
 
 Each phase: incremental PR, tests, no drive-by refactors.
