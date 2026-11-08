@@ -13,7 +13,6 @@ import PillarSection from '../components/ui/PillarSection'
 import { useAuth } from '../hooks/useAuth'
 import { useCollection } from '../hooks/useCollection'
 import { useSettings } from '../hooks/useSettings'
-import { studyStreak } from '../utils/analytics'
 import { formatHourCount, formatMinutes, todayInputValue } from '../utils/clock'
 import {
   overdueCount,
@@ -58,6 +57,7 @@ export default function DashboardPage() {
   const [masteryItems, setMasteryItems] = useState(null)
   const [remoteError, setRemoteError] = useState('')
   const [dailyMissions, setDailyMissions] = useState(null)
+  const [homeCompose, setHomeCompose] = useState(null)
 
   useEffect(() => {
     if (status !== 'authed') return undefined
@@ -66,15 +66,18 @@ export default function DashboardPage() {
     setRemoteError('')
 
     Promise.all([
+      request('GET', '/learner/home', undefined, { silent: true }).catch(() => null),
       request('GET', '/gamification/me', undefined, { silent: true }).catch(() => null),
       request('GET', '/store/inventory', undefined, { silent: true }).catch(() => null),
       request('GET', '/reviews/due', undefined, { silent: true }).catch(() => null),
       request('GET', '/mastery', undefined, { silent: true }).catch(() => null),
       request('GET', '/missions/daily', undefined, { silent: true }).catch(() => null),
-    ]).then(([me, inv, due, mastery, missions]) => {
+    ]).then(([home, me, inv, due, mastery, missions]) => {
       if (!alive) return
-      if (me) {
-        setProfile(me)
+      setHomeCompose(home)
+      const profilePayload = me || home?.profile || null
+      if (profilePayload) {
+        setProfile(profilePayload)
         setProfileState('ready')
       } else {
         setProfile(null)
@@ -82,10 +85,17 @@ export default function DashboardPage() {
       }
       setLoadout(inv?.loadout || null)
       setInventory(inv?.items || [])
-      const dueCount = Array.isArray(due?.items) ? due.items.length : Array.isArray(due) ? due.length : null
+      const dueCount =
+        home?.reviewsDue != null
+          ? home.reviewsDue
+          : Array.isArray(due?.items)
+            ? due.items.length
+            : Array.isArray(due)
+              ? due.length
+              : null
       setReviewsDue(dueCount)
       setMasteryItems(Array.isArray(mastery?.items) ? mastery.items : null)
-      setDailyMissions(missions)
+      setDailyMissions(missions || home?.dailyMissions || null)
     }).catch((err) => {
       if (!alive) return
       setProfileState('error')
@@ -119,7 +129,6 @@ export default function DashboardPage() {
       openMistakes: unreviewedMistakes(mistakes),
       countdown: countdownToKonkoor(settings),
       coverage: coverageOf(topics),
-      streakLocal: studyStreak(sessions, today),
       openTasks: todayTasks(tasks, today),
       overdue: overdueCount(tasks, today),
       recent: recentTests(tests),
@@ -152,8 +161,13 @@ export default function DashboardPage() {
     [view, reviewsDue, weakMasteryCount],
   )
 
+  // Phase 13: Home shows server streak only (local dual streak deprecated).
   const streakDisplay =
-    profile && typeof profile.streakCurrent === 'number' ? profile.streakCurrent : view.streakLocal
+    profile && typeof profile.streakCurrent === 'number'
+      ? profile.streakCurrent
+      : homeCompose?.profile && typeof homeCompose.profile.streakCurrent === 'number'
+        ? homeCompose.profile.streakCurrent
+        : '—'
 
   const levelProgress = Math.round((profile?.levelProgressRatio || 0) * 100)
 

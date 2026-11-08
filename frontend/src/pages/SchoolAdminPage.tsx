@@ -25,10 +25,14 @@ export default function SchoolAdminPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [packs, setPacks] = useState([])
+  const [packTitle, setPackTitle] = useState('')
+  const [packSubject, setPackSubject] = useState('ریاضی')
 
   const active = (workspaces || []).find((item) => item.id === activeWorkspaceId)
   const isSchool = active?.type === 'school'
   const canAdmin = caps.active.canManageSchool || caps.canManageSchool
+  const canAuthorPacks = isSchool && (canAdmin || caps.active.canTeach || active?.role === 'teacher')
 
   const loadRequests = useCallback(async () => {
     try {
@@ -61,6 +65,12 @@ export default function SchoolAdminPage() {
       if (canAdmin) {
         const m = await request('GET', '/schools/members')
         setMembers(m.items || [])
+      }
+      try {
+        const packPayload = await request('GET', '/journey/packs')
+        setPacks(packPayload.items || [])
+      } catch {
+        setPacks([])
       }
     } catch (err) {
       setError(err.message || 'بارگذاری مدرسه ممکن نشد.')
@@ -238,6 +248,90 @@ export default function SchoolAdminPage() {
           <p className="muted">مدیریت اعضا فقط برای مالک / ادمین مدرسه است.</p>
         </section>
       )}
+
+      {canAuthorPacks ? (
+        <section className="school-panel">
+          <h2>بسته‌های سفر مدرسه</h2>
+          <p className="muted">بسته‌های قابل تألیف؛ پس از انتشار می‌توانید بسته را برای فضای مدرسه فعال کنید.</p>
+          <div className="school-row">
+            <input value={packTitle} onChange={(e) => setPackTitle(e.target.value)} placeholder="عنوان بسته" />
+            <input value={packSubject} onChange={(e) => setPackSubject(e.target.value)} placeholder="درس" />
+            <button
+              type="button"
+              disabled={busy || !packTitle.trim()}
+              onClick={async () => {
+                setBusy(true)
+                try {
+                  setError('')
+                  const code = `school-${Date.now().toString(36)}`
+                  await request('POST', '/journey/packs', {
+                    code,
+                    title: packTitle.trim(),
+                    regions: [
+                      {
+                        title: packSubject.trim() || 'عمومی',
+                        subjectKey: packSubject.trim() || 'عمومی',
+                        stages: [
+                          { title: 'شروع', alwaysOpen: true },
+                          { title: 'تمرین شواهد', topic: 'تمرین', minScoreEma: 0.45 },
+                        ],
+                      },
+                    ],
+                  })
+                  setPackTitle('')
+                  setMessage('بسته پیش‌نویس ساخته شد.')
+                  await load()
+                } catch (err) {
+                  setError(err.message || 'ساخت بسته ممکن نشد.')
+                } finally {
+                  setBusy(false)
+                }
+              }}
+            >
+              ساخت پیش‌نویس
+            </button>
+          </div>
+          <ul className="school-list">
+            {(packs || []).map((pack) => (
+              <li key={pack.id}>
+                <strong>{pack.title}</strong>
+                <span className="muted">
+                  {' '}
+                  · {pack.isPublished ? 'منتشر شده' : 'پیش‌نویس'}
+                  {pack.isActive ? ' · فعال' : ''}
+                </span>
+                <div className="school-row">
+                  {!pack.isPublished ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={async () => {
+                        await request('POST', `/journey/packs/${pack.id}/publish`, {})
+                        await load()
+                      }}
+                    >
+                      انتشار
+                    </button>
+                  ) : null}
+                  {pack.isPublished && !pack.isActive ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={async () => {
+                        await request('POST', `/journey/packs/${pack.id}/activate`, {})
+                        setMessage('بسته برای فضای مدرسه فعال شد.')
+                        await load()
+                      }}
+                    >
+                      فعال‌سازی
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="school-panel">
         <h2>ساختار</h2>

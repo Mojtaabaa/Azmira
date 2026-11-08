@@ -17,7 +17,7 @@ public sealed class JourneyService(AppDbContext db, OutboxPublisher outbox)
 
     public async Task<object> GetMeAsync(Guid workspaceId, int userId, CancellationToken cancellationToken)
     {
-        var journey = await EnsureBootstrapAsync(workspaceId, userId, cancellationToken);
+        var journey = await ResolveActiveJourneyAsync(workspaceId, userId, cancellationToken);
         var progress = await EnsureProgressAsync(workspaceId, userId, journey.Id, cancellationToken);
         await EvaluateUnlocksAsync(workspaceId, userId, journey, progress, cancellationToken);
 
@@ -37,6 +37,7 @@ public sealed class JourneyService(AppDbContext db, OutboxPublisher outbox)
             locale = journey.Locale,
             version = journey.Version,
             isBootstrap = journey.IsBootstrap,
+            isPublished = journey.IsPublished,
             currentStageId = progress.CurrentStageId,
             unlockPolicy =
                 "Evidence from mastery, assessments, and SRS only. XP, study minutes, and login streak alone never unlock stages.",
@@ -82,7 +83,7 @@ public sealed class JourneyService(AppDbContext db, OutboxPublisher outbox)
 
     public async Task<object> EvaluateAsync(Guid workspaceId, int userId, CancellationToken cancellationToken)
     {
-        var journey = await EnsureBootstrapAsync(workspaceId, userId, cancellationToken);
+        var journey = await ResolveActiveJourneyAsync(workspaceId, userId, cancellationToken);
         var progress = await EnsureProgressAsync(workspaceId, userId, journey.Id, cancellationToken);
         var newly = await EvaluateUnlocksAsync(workspaceId, userId, journey, progress, cancellationToken);
         return new
@@ -90,6 +91,190 @@ public sealed class JourneyService(AppDbContext db, OutboxPublisher outbox)
             newlyUnlockedStageIds = newly,
             map = await GetMeAsync(workspaceId, userId, cancellationToken),
         };
+    }
+
+    public async Task<JourneyDefinition> ResolveActiveJourneyAsync(Guid workspaceId, int userId, CancellationToken cancellationToken)
+    {
+        var activePackId = await ReadActivePackIdAsync(workspaceId, cancellationToken);
+        if (activePackId is Guid packId)
+        {
+            var pack = await db.JourneyDefinitions
+                .Include(j => j.Regions).ThenInclude(r => r.Stages)
+                .FirstOrDefaultAsync(
+                    j => j.Id == packId
+                        && j.WorkspaceId == workspaceId
+                        && !j.IsBootstrap
+                        && j.IsPublished,
+                    cancellationToken);
+            if (pack is not null) return pack;
+        }
+
+        return await EnsureBootstrapAsync(workspaceId, userId, cancellationToken);
+    }
+
+    public async Task<object> ListPacksAsync(Guid workspaceId, CancellationToken cancellationToken)
+    {
+        var active = await ReadActivePackIdAsync(workspaceId, cancellationToken);
+        var items = await db.JourneyDefinitions.AsNoTracking()
+            .Where(j => j.WorkspaceId == workspaceId && !j.IsBootstrap)
+            .OrderByDescending(j => j.UpdatedAt)
+            .Select(j => new
+            {
+                id = j.Id,
+                code = j.Code,
+                title = j.Title,
+                locale = j.Locale,
+                version = j.Version,
+                isPublished = j.IsPublished,
+                publishedAt = j.PublishedAt,
+                updatedAt = j.UpdatedAt,
+                isActive = active == j.Id,
+                regionCount = j.Regions.Count,
+                stageCount = j.Regions.SelectMany(r => r.Stages).Count(),
+            })
+            .ToListAsync(cancellationToken);
+        return new { items, activeJourneyPackId = active };
+    }
+
+    public async Task<object> CreatePackAsync(
+        Guid workspaceId,
+        string code,
+        string title,
+        string? locale,
+        IReadOnlyList<PackRegionInput> regions,
+        CancellationToken cancellationToken)
+    {
+        code = (code ?? "").Trim();
+        title = (title ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(title))
+            throw new InvalidOperationException("code و title لازم است.");
+        if (!code.StartsWith("pack:", StringComparison.OrdinalIgnoreCase))
+            code = "pack:" + code;
+        if (regions.Count == 0)
+            throw new InvalidOperationException("حداقل یک منطقه لازم است.");
+
+        var exists = await db.JourneyDefinitions.AnyAsync(
+            j => j.WorkspaceId == workspaceId && j.Code == code,
+            cancellationToken);
+        if (exists) throw new InvalidOperationException("کد بسته تکراری است.");
+
+        var now = DateTime.UtcNow;
+        var journey = new JourneyDefinition
+        {
+            Id = Guid.NewGuid(),
+            WorkspaceId = workspaceId,
+            Code = code,
+            Title = title,
+            Locale = string.IsNullOrWhiteSpace(locale) ? "fa-IR" : locale.Trim(),
+            Version = 1,
+            IsBootstrap = false,
+            IsPublished = false,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+
+        var regionOrder = 0;
+        foreach (var regionIn in regions)
+        {
+            var region = new JourneyRegion
+            {
+                Id = Guid.NewGuid(),
+                JourneyId = journey.Id,
+                SortOrder = regionOrder++,
+                Title = string.IsNullOrWhiteSpace(regionIn.Title) ? regionIn.SubjectKey : regionIn.Title,
+                SubjectKey = regionIn.SubjectKey?.Trim() ?? "",
+                VisualThemeKey = string.IsNullOrWhiteSpace(regionIn.VisualThemeKey) ? ThemeFor(regionIn.SubjectKey ?? "") : regionIn.VisualThemeKey!,
+            };
+            if (string.IsNullOrWhiteSpace(region.SubjectKey))
+                throw new InvalidOperationException("subjectKey منطقه لازم است.");
+
+            Guid? prior = null;
+            var stageOrder = 0;
+            foreach (var stageIn in regionIn.Stages)
+            {
+                var alwaysOpen = stageOrder == 0 || stageIn.AlwaysOpen;
+                var req = new JourneyStageRequirements
+                {
+                    AlwaysOpen = alwaysOpen,
+                    Subject = region.SubjectKey,
+                    Topic = stageIn.Topic,
+                    MinMasteryLevel = alwaysOpen ? null : stageIn.MinMasteryLevel ?? (int)MasteryLevel.Developing,
+                    MinScoreEma = alwaysOpen ? null : stageIn.MinScoreEma ?? 0.45,
+                    MinAssessmentPercent = stageIn.MinAssessmentPercent,
+                    MinSrsCorrectReviews = stageIn.MinSrsCorrectReviews,
+                };
+                region.Stages.Add(new JourneyStage
+                {
+                    Id = Guid.NewGuid(),
+                    RegionId = region.Id,
+                    SortOrder = stageOrder,
+                    Title = string.IsNullOrWhiteSpace(stageIn.Title) ? (stageIn.Topic ?? $"ایستگاه {stageOrder + 1}") : stageIn.Title!,
+                    NarrativeBlurb = stageIn.NarrativeBlurb ?? "باز شدن فقط با شواهد یادگیری.",
+                    RequirementsJson = JsonSerializer.Serialize(req, JourneyJson.Options),
+                    UnlockPriorStageId = prior,
+                    RewardsJson = JsonSerializer.Serialize(new JourneyStageRewards { Coins = stageIn.Coins }, JourneyJson.Options),
+                });
+                prior = region.Stages[^1].Id;
+                stageOrder++;
+            }
+
+            if (region.Stages.Count == 0)
+                throw new InvalidOperationException($"منطقه «{region.Title}» باید حداقل یک ایستگاه داشته باشد.");
+            journey.Regions.Add(region);
+        }
+
+        db.JourneyDefinitions.Add(journey);
+        await db.SaveChangesAsync(cancellationToken);
+        return new { id = journey.Id, code = journey.Code, title = journey.Title, isPublished = false };
+    }
+
+    public async Task<object> PublishPackAsync(Guid workspaceId, Guid packId, CancellationToken cancellationToken)
+    {
+        var pack = await db.JourneyDefinitions
+            .Include(j => j.Regions).ThenInclude(r => r.Stages)
+            .FirstOrDefaultAsync(j => j.Id == packId && j.WorkspaceId == workspaceId && !j.IsBootstrap, cancellationToken)
+            ?? throw new InvalidOperationException("بسته پیدا نشد.");
+        if (pack.Regions.Count == 0 || pack.Regions.All(r => r.Stages.Count == 0))
+            throw new InvalidOperationException("بسته خالی قابل انتشار نیست.");
+
+        pack.IsPublished = true;
+        pack.PublishedAt = DateTime.UtcNow;
+        pack.UpdatedAt = DateTime.UtcNow;
+        pack.Version += 1;
+        await db.SaveChangesAsync(cancellationToken);
+        return new { id = pack.Id, isPublished = true, publishedAt = pack.PublishedAt, version = pack.Version };
+    }
+
+    public async Task<object> ActivatePackAsync(Guid workspaceId, Guid? packId, CancellationToken cancellationToken)
+    {
+        if (packId is Guid id)
+        {
+            var ok = await db.JourneyDefinitions.AnyAsync(
+                j => j.Id == id && j.WorkspaceId == workspaceId && !j.IsBootstrap && j.IsPublished,
+                cancellationToken);
+            if (!ok) throw new InvalidOperationException("فقط بسته‌های منتشرشده قابل فعال‌سازی هستند.");
+        }
+
+        var settings = await db.WorkspaceSettings.FirstAsync(s => s.WorkspaceId == workspaceId, cancellationToken);
+        Dictionary<string, object?> map;
+        try
+        {
+            map = JsonSerializer.Deserialize<Dictionary<string, object?>>(
+                string.IsNullOrWhiteSpace(settings.FeatureFlags) ? "{}" : settings.FeatureFlags)
+                ?? new();
+        }
+        catch
+        {
+            map = new();
+        }
+
+        if (packId is Guid activeId) map["activeJourneyPackId"] = activeId.ToString("D");
+        else map.Remove("activeJourneyPackId");
+
+        settings.FeatureFlags = JsonSerializer.Serialize(map);
+        settings.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+        return new { activeJourneyPackId = packId };
     }
 
     public async Task<JourneyDefinition> EnsureBootstrapAsync(Guid workspaceId, int userId, CancellationToken cancellationToken)
@@ -586,5 +771,51 @@ public sealed class JourneyService(AppDbContext db, OutboxPublisher outbox)
         return chars.Length == 0 ? "topic" : new string(chars).ToLowerInvariant();
     }
 
+    private async Task<Guid?> ReadActivePackIdAsync(Guid workspaceId, CancellationToken cancellationToken)
+    {
+        var flags = await db.WorkspaceSettings.AsNoTracking()
+            .Where(s => s.WorkspaceId == workspaceId)
+            .Select(s => s.FeatureFlags)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(flags)) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(flags);
+            if (doc.RootElement.TryGetProperty("activeJourneyPackId", out var el)
+                && el.ValueKind == JsonValueKind.String
+                && Guid.TryParse(el.GetString(), out var id))
+            {
+                return id;
+            }
+        }
+        catch (JsonException)
+        {
+            // ignore malformed flags
+        }
+
+        return null;
+    }
+
     private readonly record struct SrsHit(Guid Id, string Subject, string Topic, DateTime ReviewedAt);
+}
+
+public sealed class PackRegionInput
+{
+    public string? Title { get; set; }
+    public string? SubjectKey { get; set; }
+    public string? VisualThemeKey { get; set; }
+    public List<PackStageInput> Stages { get; set; } = [];
+}
+
+public sealed class PackStageInput
+{
+    public string? Title { get; set; }
+    public string? Topic { get; set; }
+    public string? NarrativeBlurb { get; set; }
+    public bool AlwaysOpen { get; set; }
+    public int? MinMasteryLevel { get; set; }
+    public double? MinScoreEma { get; set; }
+    public double? MinAssessmentPercent { get; set; }
+    public int? MinSrsCorrectReviews { get; set; }
+    public int? Coins { get; set; }
 }
