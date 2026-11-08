@@ -10,15 +10,22 @@ export default function EmptyState({
   pillar,
 }) {
   return (
-    <div className={`empty-state${pillar ? ` empty-state--${pillar}` : ''}`} role="status">
+    <section
+      className={`empty-state${pillar ? ` empty-state--${pillar}` : ''}`}
+      role="status"
+      aria-live="polite"
+      tabIndex={-1}
+    >
       <div className="empty-state__mark" aria-hidden="true" />
-      <h3 className="empty-state__title">{title}</h3>
+      <h3 className="empty-state__title" id={undefined}>
+        {title}
+      </h3>
       {description ? <p className="empty-state__copy">{description}</p> : null}
       {actionTo && actionLabel ? (
         <Link className="button button-secondary empty-state__action" to={actionTo}>
           {actionLabel}
         </Link>
       ) : null}
-    </div>
+    </section>
   )
 }

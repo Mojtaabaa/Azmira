@@ -116,6 +116,33 @@
   border-color: color-mix(in srgb, var(--accent, #b85c38) 35%, transparent);
 }
 
+.journey-node--available .journey-node__dot {
+  animation: journey-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes journey-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent, #b85c38) 18%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent, #b85c38) 10%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-node__btn,
+  .journey-node--available .journey-node__dot,
+  .journey-drawer {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .journey-node__btn:hover {
+    transform: none;
+  }
+}
+
 .journey-node__dot {
   width: 0.85rem;
   height: 0.85rem;

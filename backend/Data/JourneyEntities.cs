@@ -11,6 +11,9 @@ public sealed class JourneyDefinition
     public int Version { get; set; } = 1;
     public bool IsSystem { get; set; }
     public bool IsBootstrap { get; set; }
+    /// <summary>School-authored packs become assignable when published.</summary>
+    public bool IsPublished { get; set; }
+    public DateTime? PublishedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public List<JourneyRegion> Regions { get; set; } = [];
