@@ -215,6 +215,152 @@ public sealed class AiCoachService(
         };
     }
 
+    public async Task<object> ChatAsync(
+        Guid workspaceId,
+        int userId,
+        string message,
+        Guid? threadId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            throw new InvalidOperationException("پیام خالی است.");
+
+        await context.EnsureAuthorizedAsync(workspaceId, userId, userId, cancellationToken);
+        var settings = await RequireEnabledAsync(workspaceId, userId, cancellationToken);
+        var facts = await context.BuildFactsAsync(workspaceId, userId, cancellationToken);
+
+        CoachThread thread;
+        if (threadId is Guid existingId)
+        {
+            thread = await db.CoachThreads
+                .Include(item => item.Messages)
+                .FirstOrDefaultAsync(
+                    item => item.Id == existingId && item.WorkspaceId == workspaceId && item.UserId == userId,
+                    cancellationToken)
+                ?? throw new InvalidOperationException("گفتگو پیدا نشد.");
+        }
+        else
+        {
+            thread = new CoachThread
+            {
+                Id = Guid.NewGuid(),
+                WorkspaceId = workspaceId,
+                UserId = userId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            };
+            db.CoachThreads.Add(thread);
+        }
+
+        var userMsg = new CoachMessage
+        {
+            Id = Guid.NewGuid(),
+            ThreadId = thread.Id,
+            Role = "user",
+            Content = message.Trim(),
+            Confidence = "",
+            EvidenceRefsJson = "[]",
+            ProviderCode = "",
+            CreatedAt = DateTime.UtcNow,
+        };
+        db.CoachMessages.Add(userMsg);
+
+        var evidenceRefs = BuildEvidenceRefs(facts);
+        var confidence = evidenceRefs.Count >= 3 ? "high" : evidenceRefs.Count >= 1 ? "medium" : "low";
+
+        var provider = providers.Resolve(settings.ProviderCode);
+        var prompt = JsonSerializer.Serialize(new
+        {
+            kind = "chat",
+            message = message.Trim(),
+            facts,
+            evidenceRefs,
+            confidence,
+        });
+        var completion = await provider.CompleteAsync(
+            new AiCompletionRequest(settings.Model, SystemPrompt + " " + settings.SystemPromptExtra, prompt),
+            cancellationToken);
+
+        // evidenceRefs always server-built from tenant facts — never accept provider-supplied refs.
+        var replyRefs = evidenceRefs;
+        string reply;
+        var replyConfidence = confidence;
+
+        if (completion.Ok)
+        {
+            var parsed = TryParseObject(completion.Text);
+            if (parsed is not null && parsed.TryGetValue("reply", out var r) && r is not null)
+            {
+                reply = r.ToString() ?? completion.Text;
+            }
+            else
+            {
+                reply = string.IsNullOrWhiteSpace(completion.Text)
+                    ? HeuristicChatReply(facts, evidenceRefs, confidence)
+                    : completion.Text;
+            }
+
+            // Provider may only lower confidence, never inflate beyond server-derived evidence.
+            if (parsed is not null && parsed.TryGetValue("confidence", out var conf) && conf is not null)
+            {
+                var c = conf.ToString()?.Trim().ToLowerInvariant();
+                if (c is "high" or "medium" or "low")
+                    replyConfidence = MinConfidence(confidence, c);
+            }
+        }
+        else
+        {
+            // Heuristic fallback when LLM/provider fails — core UX must not require a key.
+            reply = HeuristicChatReply(facts, evidenceRefs, confidence);
+            completion = new AiCompletionResult(true, reply, null, "heuristic");
+        }
+
+        if (replyConfidence == "low" && evidenceRefs.Count == 0)
+        {
+            reply = "داده کافی برای پاسخ مطمئن نیست. بعد از چند ارزیابی یا بازبینی موفق دوباره بپرس.";
+        }
+
+        var assistantMsg = new CoachMessage
+        {
+            Id = Guid.NewGuid(),
+            ThreadId = thread.Id,
+            Role = "assistant",
+            Content = reply,
+            Confidence = replyConfidence,
+            EvidenceRefsJson = JsonSerializer.Serialize(replyRefs),
+            ProviderCode = completion.ProviderCode,
+            CreatedAt = DateTime.UtcNow,
+        };
+        db.CoachMessages.Add(assistantMsg);
+        thread.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new
+        {
+            threadId = thread.Id,
+            messageId = assistantMsg.Id,
+            reply,
+            confidence = replyConfidence,
+            confidenceNote = "high|medium|low از حجم شواهد مجاز است، نه قطعیت آماری.",
+            evidenceRefs = replyRefs,
+            evidencePolicy = "serverFactsOnly",
+            provider = completion.ProviderCode,
+            note = "facts از داده واقعی فضای کاری؛ narrative پیشنهادی است و بدون تأیید شما تغییری اعمال نمی‌شود.",
+        };
+    }
+
+    private static string MinConfidence(string a, string b)
+    {
+        static int Rank(string value) => value switch
+        {
+            "high" => 3,
+            "medium" => 2,
+            "low" => 1,
+            _ => 1,
+        };
+        return Rank(a) <= Rank(b) ? a : b;
+    }
+
     public async Task<object> ResolveRecommendationAsync(
         Guid workspaceId,
         int userId,
@@ -338,6 +484,69 @@ public sealed class AiCoachService(
             throw new InvalidOperationException("به دلیل محدودیت سنی، هوش مصنوعی برای این حساب فعال نیست.");
 
         return settings;
+    }
+
+    private static List<object> BuildEvidenceRefs(object facts)
+    {
+        var refs = new List<object>();
+        try
+        {
+            var doc = JsonSerializer.SerializeToElement(facts);
+            if (doc.TryGetProperty("lowMasteryTopics", out var mastery) && mastery.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var node in mastery.EnumerateArray().Take(5))
+                {
+                    var subject = node.TryGetProperty("Subject", out var s) ? s.GetString()
+                        : node.TryGetProperty("subject", out var s2) ? s2.GetString() : null;
+                    var topic = node.TryGetProperty("Topic", out var t) ? t.GetString()
+                        : node.TryGetProperty("topic", out var t2) ? t2.GetString() : null;
+                    var ema = node.TryGetProperty("ScoreEma", out var e) && e.TryGetDouble(out var ev) ? ev
+                        : node.TryGetProperty("scoreEma", out var e2) && e2.TryGetDouble(out var ev2) ? ev2 : (double?)null;
+                    refs.Add(new
+                    {
+                        type = "MasteryNode",
+                        subject,
+                        topic,
+                        detail = ema is null ? "تسلط پایین" : $"EMA {ema:0.00}",
+                    });
+                }
+            }
+
+            if (doc.TryGetProperty("weakestSubject", out var weak) && weak.ValueKind == JsonValueKind.String)
+            {
+                refs.Add(new { type = "Fact", id = "weakestSubject", subject = weak.GetString(), detail = "ضعیف‌ترین درس از facts" });
+            }
+
+            if (doc.TryGetProperty("overdueReviews", out var due) && due.TryGetInt32(out var dueCount) && dueCount > 0)
+            {
+                refs.Add(new { type = "SrsDue", id = "overdueReviews", detail = $"{dueCount} کارت سررسید" });
+            }
+        }
+        catch
+        {
+            // ignore malformed facts
+        }
+
+        return refs;
+    }
+
+    private static string HeuristicChatReply(object facts, List<object> evidenceRefs, string confidence)
+    {
+        var weak = "درس ضعیف";
+        try
+        {
+            var doc = JsonSerializer.SerializeToElement(facts);
+            if (doc.TryGetProperty("weakestSubject", out var w) && w.ValueKind == JsonValueKind.String)
+                weak = w.GetString() ?? weak;
+        }
+        catch
+        {
+            // ignore
+        }
+
+        return confidence == "low"
+            ? "داده کافی نیست؛ چند ارزیابی یا بازبینی موفق ثبت کن تا دقیق‌تر راهنمایی کنم."
+            : $"بر اساس شواهد فعلی، تمرکز کوتاه روی «{weak}» و بازبینی کارت‌های سررسید پیشنهاد می‌شود. ({evidenceRefs.Count} ارجاع شواهد)";
     }
 
     private static Dictionary<string, object?>? TryParseObject(string text)

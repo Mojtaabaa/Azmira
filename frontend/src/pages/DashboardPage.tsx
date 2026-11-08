@@ -318,10 +318,10 @@ export default function DashboardPage() {
                 <strong dir="ltr">{masteryEvidenceCount}</strong> شاهد ثبت‌شده
               </p>
               <p className="learner-home__note">
-                تمرکز این فاز روی پیشرفت شخصی است. مقایسه گروهی مدرسه در فازهای بعد و با کنترل حریم خصوصی اضافه می‌شود.
+                نمودار بهبود شخصی نسبت به معیار پایه در مرکز بهبود آماده است. مقایسه گروهی اختیاری و پیش‌فرض خصوصی است.
               </p>
-              <Link className="button button-secondary" to="/mastery">
-                دیدن نقاط ضعف
+              <Link className="button button-secondary" to="/improvement">
+                دیدن بهبود شخصی
               </Link>
             </div>
           )}

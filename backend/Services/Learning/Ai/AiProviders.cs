@@ -32,6 +32,10 @@ public sealed class HeuristicAiProvider : IAiProvider
         {
             text = BuildPlanner(prompt);
         }
+        else if (prompt.Contains("\"kind\":\"chat\"", StringComparison.OrdinalIgnoreCase))
+        {
+            text = BuildChat(prompt);
+        }
         else
         {
             text = BuildCoach(prompt);
@@ -89,6 +93,22 @@ public sealed class HeuristicAiProvider : IAiProvider
                 {"title":"بازبینی سررسید","kind":"Review","body":"کارت‌های overdue را امروز مرور کن."},
                 {"title":"ماموریت تمرینی","kind":"Quest","body":"یک ماموریت روزانه روی مبحث ضعیف فعال کن."}
               ]
+            }
+            """;
+    }
+
+    private static string BuildChat(string prompt)
+    {
+        var weak = ExtractString(prompt, "weakestSubject") ?? "ریاضی";
+        var confidence = ExtractString(prompt, "confidence") ?? "medium";
+        var reply = confidence == "low"
+            ? "داده کافی نیست؛ بعد از چند ارزیابی یا بازبینی موفق دوباره بپرس."
+            : $"طبق شواهد فضای کاری، روی «{weak}» تمرکز کوتاه داشته باش و کارت‌های سررسید را امروز مرور کن.";
+        return $$"""
+            {
+              "reply":"{{reply}}",
+              "confidence":"{{confidence}}",
+              "evidenceRefs":[{"type":"Fact","id":"weakestSubject","subject":"{{weak}}","detail":"از facts مجاز"}]
             }
             """;
     }

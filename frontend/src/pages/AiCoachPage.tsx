@@ -14,6 +14,9 @@ export default function AiCoachPage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [chatInput, setChatInput] = useState('')
+  const [threadId, setThreadId] = useState(null)
+  const [chatTurns, setChatTurns] = useState([])
 
   const active = (workspaces || []).find((item) => item.id === activeWorkspaceId)
   const canAdmin =
@@ -83,6 +86,37 @@ export default function AiCoachPage() {
     }
   }
 
+  async function sendChat(event) {
+    event.preventDefault()
+    if (!chatInput.trim()) return
+    const userText = chatInput.trim()
+    setChatInput('')
+    setChatTurns((prev) => [...prev, { role: 'user', content: userText }])
+    setBusy(true)
+    try {
+      setError('')
+      const payload = await request('POST', '/coach/chat', {
+        message: userText,
+        threadId: threadId || undefined,
+      })
+      setThreadId(payload.threadId)
+      setChatTurns((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: payload.reply,
+          confidence: payload.confidence,
+          evidenceRefs: payload.evidenceRefs || [],
+          provider: payload.provider,
+        },
+      ])
+    } catch (err) {
+      setError(err.message || 'گفتگو ممکن نشد.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="learn-page">
       <header className="learn-hero">
@@ -131,7 +165,44 @@ export default function AiCoachPage() {
       ) : null}
 
       <section className="learn-panel">
-        <h2>اقدامات</h2>
+        <h2>گفتگو با مربی</h2>
+        <p className="learn-note">هر پاسخ با confidence و evidenceRefs می‌آید؛ بدون کلید LLM هم مسیر heuristic فعال است.</p>
+        <ul className="learn-list">
+          {chatTurns.map((turn, index) => (
+            <li key={`${turn.role}-${index}`}>
+              <div>
+                <strong>{turn.role === 'user' ? 'تو' : 'مربی'}</strong>
+                <span>{turn.content}</span>
+                {turn.confidence ? (
+                  <span className="muted">
+                    {' '}
+                    · سطح شواهد: {turn.confidence} (نه قطعیت)
+                    {turn.provider ? ` · ${turn.provider}` : ''}
+                  </span>
+                ) : null}
+                {turn.evidenceRefs?.length ? (
+                  <pre className="facts-box">{JSON.stringify(turn.evidenceRefs, null, 2)}</pre>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+        <form className="learn-row" onSubmit={sendChat}>
+          <input
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            placeholder="سوالت درباره یادگیری…"
+            disabled={busy}
+            style={{ flex: 1 }}
+          />
+          <button type="submit" disabled={busy || !chatInput.trim()}>
+            ارسال
+          </button>
+        </form>
+      </section>
+
+      <section className="learn-panel">
+        <h2>اقدامات ساخت‌یافته</h2>
         <div className="learn-actions">
           <button type="button" disabled={busy} onClick={runAnalyze}>
             تحلیل هفتگی

@@ -28,6 +28,12 @@ test('nav groups cover pillar hubs without duplicate routes', () => {
   assert.ok(routes.includes('/journey'))
   assert.ok(routes.includes('/progress'))
   assert.ok(routes.includes('/missions'))
+  assert.ok(routes.includes('/improvement'))
+})
+
+test('improvement routes resolve to IMPROVE pillar', () => {
+  assert.equal(findActivePillar('/improvement'), 'improve')
+  assert.equal(findActivePillar('/ai-coach'), 'improve')
 })
 
 test('mobile tabs map to four pillar hubs', () => {
